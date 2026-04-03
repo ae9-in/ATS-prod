@@ -1,0 +1,11 @@
+{
+    "name": "ats-platform",
+    "version": "1.0.0",
+    "description": "TalentOS ATS with Anti-Gravity Physics Engine",
+    "scripts": {
+        "install:all": "npm install --prefix frontend --legacy-peer-deps && npm install --prefix backend",
+        "dev:frontend": "npm run dev --prefix frontend",
+        "dev:backend": "npm run dev --prefix backend",
+        "dev": "node scripts/dev.js"
+    }
+}

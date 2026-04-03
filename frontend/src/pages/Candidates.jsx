@@ -1,0 +1,461 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import EnterpriseLayout, { EnterpriseSidebar, EnterpriseTopbar } from '../components/EnterpriseLayout';
+import { PageEnter, Reveal } from '../components/PageMotion';
+import UserChip from '../components/UserChip';
+import NotificationBell from '../components/NotificationBell';
+import { apiGet, apiPost, getStoredUser } from '../lib/api';
+import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
+
+const initialForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  currentCompany: '',
+  totalExperienceYears: '',
+  source: '',
+  primarySkill: '',
+  customFields: {},
+};
+
+const deriveStatus = (candidate) => {
+  const stageName = candidate?.applications?.[0]?.currentStage?.name;
+  if (stageName) return stageName;
+  return 'Added';
+};
+
+const Candidates = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [banner, setBanner] = useState('');
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [showCustomFieldSetup, setShowCustomFieldSetup] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savingCustomField, setSavingCustomField] = useState(false);
+  const [shortlistFilter, setShortlistFilter] = useState('all');
+  const [form, setForm] = useState(initialForm);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [customDefinitions, setCustomDefinitions] = useState([]);
+  const [customFieldForm, setCustomFieldForm] = useState({
+    fieldLabel: '',
+    fieldKey: '',
+    isRequired: false,
+  });
+  const currentUser = getStoredUser();
+  const canManageCandidates = ['SUPER_ADMIN', 'RECRUITER'].includes(currentUser?.role);
+
+  const loadCandidates = async (query = '') => {
+    const searchParam = query.trim() ? `&search=${encodeURIComponent(query.trim())}` : '';
+    const res = await apiGet(`/candidates?limit=30${searchParam}`);
+    setItems(res.data || []);
+  };
+
+  const loadCustomDefinitions = async () => {
+    const res = await apiGet('/candidates/custom-fields/definitions');
+    setCustomDefinitions(res.data || []);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        await Promise.all([loadCandidates(''), loadCustomDefinitions()]);
+      } catch (err) {
+        if (!mounted) return;
+        setError(err.message || 'Failed to load candidates');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const onSearchSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      setLoading(true);
+      setError('');
+      await loadCandidates(search);
+    } catch (err) {
+      setError(err.message || 'Failed to search candidates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onCreateCandidate = async (event) => {
+    event.preventDefault();
+    setError('');
+    setBanner('');
+
+    try {
+      setSaving(true);
+
+      const skills = form.primarySkill.trim()
+        ? [{ skillName: form.primarySkill.trim(), proficiency: 4, years: Number(form.totalExperienceYears || 0) || 1 }]
+        : [];
+
+      const payload = {
+        fullName: form.fullName.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        totalExperienceYears: form.totalExperienceYears ? Number(form.totalExperienceYears) : null,
+        currentCompany: form.currentCompany.trim() || null,
+        source: form.source.trim() || null,
+        skills,
+        education: [],
+        customFields: form.customFields,
+      };
+
+      await apiPost('/candidates', payload);
+      await loadCandidates(search);
+
+      setForm(initialForm);
+      setShowCreate(false);
+      setBanner('Candidate created successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to create candidate');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onBulkUpload = async (event) => {
+    event.preventDefault();
+    if (!bulkFile) {
+      setError('Please choose an Excel file before upload.');
+      return;
+    }
+
+    setError('');
+    setBanner('');
+
+    try {
+      setSaving(true);
+      const token = localStorage.getItem('ats_token');
+      const formData = new FormData();
+      formData.append('file', bulkFile);
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/candidates/bulk-upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || 'Bulk upload failed');
+      }
+
+      await loadCandidates(search);
+      setBulkFile(null);
+      setBanner(`Bulk upload complete. Inserted: ${json.data.inserted}, Skipped: ${json.data.skipped}`);
+    } catch (err) {
+      setError(err.message || 'Bulk upload failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onCreateCustomField = async (event) => {
+    event.preventDefault();
+    setError('');
+    setBanner('');
+
+    try {
+      setSavingCustomField(true);
+      await apiPost('/candidates/custom-fields/definitions', {
+        fieldLabel: customFieldForm.fieldLabel.trim(),
+        fieldKey: customFieldForm.fieldKey.trim() || customFieldForm.fieldLabel.trim().toLowerCase().replace(/\s+/g, '_'),
+        fieldType: 'text',
+        isRequired: customFieldForm.isRequired,
+      });
+      await loadCustomDefinitions();
+      setCustomFieldForm({ fieldLabel: '', fieldKey: '', isRequired: false });
+      setBanner('Custom field created successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to create custom field');
+    } finally {
+      setSavingCustomField(false);
+    }
+  };
+
+  const candidates = useMemo(
+    () =>
+      items.map((candidate, idx) => ({
+        id: candidate.id,
+        name: candidate.fullName,
+        role: candidate.currentCompany || 'Candidate',
+        status: deriveStatus(candidate),
+        match: 84 + ((idx * 3) % 15),
+        applicationsCount: candidate?._count?.applications || candidate?.applications?.length || 0,
+        isShortlisted: Boolean((candidate?.applications || []).some((item) => item.shortlisted)),
+      })),
+    [items],
+  );
+
+  const visibleCandidates = useMemo(() => {
+    if (shortlistFilter === 'shortlisted') {
+      return candidates.filter((candidate) => candidate.isShortlisted);
+    }
+    if (shortlistFilter === 'not-shortlisted') {
+      return candidates.filter((candidate) => !candidate.isShortlisted);
+    }
+    return candidates;
+  }, [candidates, shortlistFilter]);
+
+  return (
+    <EnterpriseLayout
+      sidebar={<EnterpriseSidebar active="candidates" items={enterpriseNavItems} footerLinks={enterpriseFooterLinks} />}
+      topbar={
+        <EnterpriseTopbar
+          searchPlaceholder="Search candidates, skills, or stages..."
+          right={
+            <>
+              <NotificationBell />
+              {canManageCandidates ? (
+                <button className="os-btn-primary" type="button" onClick={() => setShowCreate((value) => !value)}>
+                  {showCreate ? 'Close Form' : 'Add Candidate'}
+                </button>
+              ) : null}
+              {canManageCandidates ? (
+                <button className="os-btn-outline" type="button" onClick={() => setShowCustomFieldSetup((value) => !value)}>
+                  {showCustomFieldSetup ? 'Close Fields' : 'Custom Fields'}
+                </button>
+              ) : null}
+              <UserChip fallbackName="Alex Rivera" fallbackRole="Recruiting Lead" avatarSeed="candidate-user" />
+            </>
+          }
+        />
+      }
+    >
+      <PageEnter>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="os-eyebrow">Talent Directory</div>
+            <h1 className="os-h1">Candidate Pool</h1>
+          </div>
+          <div className="text-sm text-[#6f7d98]">{loading ? 'Loading...' : `${candidates.length} candidates`}</div>
+        </div>
+
+        <form className="os-card mt-4 p-3 flex flex-wrap gap-2" onSubmit={onSearchSubmit}>
+          <input
+            className="flex-1 min-w-[220px] h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+            placeholder="Search by name, email, or phone"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <button className="os-btn-outline" type="button" onClick={async () => {
+            setSearch('');
+            setLoading(true);
+            try {
+              await loadCandidates('');
+            } catch (err) {
+              setError(err.message || 'Failed to reset search');
+            } finally {
+              setLoading(false);
+            }
+          }}>
+            Reset
+          </button>
+          <button className="os-btn-primary" type="submit">Search</button>
+        </form>
+
+        <div className="os-card mt-4 p-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-[#5e6b87]">Shortlist:</span>
+          <button
+            className={`os-btn-outline !h-9 ${shortlistFilter === 'all' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
+            type="button"
+            onClick={() => setShortlistFilter('all')}
+          >
+            All
+          </button>
+          <button
+            className={`os-btn-outline !h-9 ${shortlistFilter === 'shortlisted' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
+            type="button"
+            onClick={() => setShortlistFilter('shortlisted')}
+          >
+            Shortlisted
+          </button>
+          <button
+            className={`os-btn-outline !h-9 ${shortlistFilter === 'not-shortlisted' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
+            type="button"
+            onClick={() => setShortlistFilter('not-shortlisted')}
+          >
+            Not Shortlisted
+          </button>
+        </div>
+
+        {canManageCandidates ? (
+          <form className="os-card mt-4 p-3 flex flex-wrap gap-2 items-center" onSubmit={onBulkUpload}>
+            <input
+              className="os-file-input max-w-[520px]"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(event) => setBulkFile(event.target.files?.[0] || null)}
+            />
+            <button className="os-btn-outline" type="submit" disabled={saving}>
+              {saving ? 'Uploading...' : 'Bulk Upload Excel'}
+            </button>
+            <span className="text-xs text-[#6f7d98]">Columns: fullName, email, phone, currentCompany, totalExperienceYears, source</span>
+          </form>
+        ) : null}
+
+        {showCustomFieldSetup && canManageCandidates ? (
+          <Reveal className="os-card mt-4 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Configuration</div>
+                <h3 className="text-xl font-semibold text-[#0f1b3d] font-[Manrope]">Candidate Custom Fields</h3>
+              </div>
+              <div className="text-xs text-[#6f7d98]">{customDefinitions.length} fields</div>
+            </div>
+            <form className="grid md:grid-cols-3 gap-3 mt-4" onSubmit={onCreateCustomField}>
+              <input
+                className="h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+                placeholder="Field Label (e.g., College Drive)"
+                value={customFieldForm.fieldLabel}
+                onChange={(event) => setCustomFieldForm((prev) => ({ ...prev, fieldLabel: event.target.value }))}
+                required
+              />
+              <input
+                className="h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+                placeholder="Field Key (optional, e.g., college_drive)"
+                value={customFieldForm.fieldKey}
+                onChange={(event) => setCustomFieldForm((prev) => ({ ...prev, fieldKey: event.target.value }))}
+              />
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-[#5b6783] flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={customFieldForm.isRequired}
+                    onChange={(event) => setCustomFieldForm((prev) => ({ ...prev, isRequired: event.target.checked }))}
+                  />
+                  Required
+                </label>
+                <button className="os-btn-primary ml-auto" type="submit" disabled={savingCustomField}>
+                  {savingCustomField ? 'Saving...' : 'Add Field'}
+                </button>
+              </div>
+            </form>
+            <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-3 gap-2">
+              {customDefinitions.map((definition) => (
+                <div key={definition.id} className="rounded-lg border border-[#dbe4ee] bg-[#f8fbff] p-3">
+                  <div className="text-sm font-semibold text-[#0f1b3d]">{definition.fieldLabel}</div>
+                  <div className="text-xs text-[#6f7d98] mt-1">{definition.fieldKey}</div>
+                  <div className="text-[11px] uppercase tracking-[.12em] text-[#7682a0] mt-2">{definition.isRequired ? 'Required' : 'Optional'}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        ) : null}
+
+        {showCreate && canManageCandidates ? (
+          <Reveal className="os-card mt-4 p-5">
+            <form className="grid md:grid-cols-2 xl:grid-cols-3 gap-3" onSubmit={onCreateCandidate}>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Full Name</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.fullName} onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))} required />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Email</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Phone</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Current Company</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.currentCompany} onChange={(event) => setForm((prev) => ({ ...prev, currentCompany: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Experience (Years)</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" type="number" min="0" step="0.1" value={form.totalExperienceYears} onChange={(event) => setForm((prev) => ({ ...prev, totalExperienceYears: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Source</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
+              </div>
+              <div className="md:col-span-2 xl:col-span-1">
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Primary Skill</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.primarySkill} onChange={(event) => setForm((prev) => ({ ...prev, primarySkill: event.target.value }))} />
+              </div>
+              {customDefinitions.map((definition) => (
+                <div key={definition.id}>
+                  <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">
+                    {definition.fieldLabel}
+                    {definition.isRequired ? ' *' : ''}
+                  </label>
+                  <input
+                    className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm"
+                    value={form.customFields?.[definition.fieldKey] || ''}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        customFields: {
+                          ...(prev.customFields || {}),
+                          [definition.fieldKey]: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+              <div className="md:col-span-2 xl:col-span-2 flex items-end justify-end gap-2">
+                <button className="os-btn-outline" type="button" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button className="os-btn-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Create Candidate'}
+                </button>
+              </div>
+            </form>
+          </Reveal>
+        ) : null}
+
+        {error ? <div className="mt-4 os-card p-4 text-red-600 text-sm">{error}</div> : null}
+        {banner ? <div className="mt-4 os-card p-4 text-[#2454cf] text-sm">{banner}</div> : null}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+          {visibleCandidates.map((candidate, idx) => (
+            <Reveal key={candidate.id} delay={idx * 0.04}>
+              <a href={`/candidate/${candidate.id}`} className="os-card p-5 hover:shadow-lg transition-shadow duration-300 cursor-pointer block">
+                <div className="flex items-start justify-between mb-4">
+                  <img className="w-14 h-14 rounded-xl object-cover" src={`https://i.pravatar.cc/140?u=${candidate.id}`} alt={candidate.name} />
+                  <span className="px-2.5 py-1 bg-[#e8efff] text-[#3558ba] rounded-full text-xs font-semibold">{candidate.match}% Match</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-semibold font-[Manrope] text-[#0f1b3d]">{candidate.name}</h3>
+                  <p className="text-sm text-[#6f7d98] mt-1">{candidate.role}</p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#e9eef4] flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-[.1em] text-[#74829e]">{candidate.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] uppercase tracking-[.1em] ${candidate.isShortlisted ? 'text-[#1e8a54]' : 'text-[#657290]'}`}>
+                      {candidate.isShortlisted ? 'Shortlisted' : 'Open'}
+                    </span>
+                    <span className="text-xs text-[#657290]">{candidate.applicationsCount} apps</span>
+                  </div>
+                </div>
+              </a>
+            </Reveal>
+          ))}
+
+          {!loading && visibleCandidates.length === 0 ? (
+            <Reveal>
+              <div className="os-card p-5 text-sm text-[#6f7d98]">No candidates found.</div>
+            </Reveal>
+          ) : null}
+        </div>
+      </PageEnter>
+    </EnterpriseLayout>
+  );
+};
+
+export default Candidates;

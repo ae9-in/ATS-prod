@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #FFFFFF;
+  --text-primary: #0B1B3D;
+  --accent-blue: #1D4ED8;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --border-color: #E2E8F0;
+  --sidebar-bg: #0B1B3D;
+  --font-main: 'Inter', sans-serif;
+  --font-display: 'Sora', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: #F8FAFC;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}

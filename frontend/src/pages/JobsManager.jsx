@@ -1,0 +1,295 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import EnterpriseLayout, { EnterpriseSidebar, EnterpriseTopbar } from '../components/EnterpriseLayout';
+import { PageEnter, Reveal } from '../components/PageMotion';
+import UserChip from '../components/UserChip';
+import NotificationBell from '../components/NotificationBell';
+import { apiGet, apiPatch, apiPost, getStoredUser } from '../lib/api';
+import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
+
+const defaultJobForm = {
+  title: '',
+  department: '',
+  location: '',
+  employmentType: 'Full-time',
+  openingsCount: 1,
+  description: '',
+};
+
+const JobsManager = () => {
+  const navigate = useNavigate();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [banner, setBanner] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(defaultJobForm);
+  const [shortlistByJob, setShortlistByJob] = useState({});
+  const currentUser = getStoredUser();
+  const canManageJobs = ['SUPER_ADMIN', 'RECRUITER'].includes(currentUser?.role);
+
+  const loadJobs = async () => {
+    const query = statusFilter === 'all' ? '' : `&isActive=${statusFilter === 'active'}`;
+    const [jobsRes, applicationsRes] = await Promise.all([
+      apiGet(`/jobs?limit=40${query}`),
+      apiGet('/applications?limit=400'),
+    ]);
+    const shortlistMap = {};
+    (applicationsRes.data || []).forEach((app) => {
+      if (!app.jobId) return;
+      if (!shortlistMap[app.jobId]) shortlistMap[app.jobId] = 0;
+      if (app.shortlisted) shortlistMap[app.jobId] += 1;
+    });
+    setShortlistByJob(shortlistMap);
+    setItems(jobsRes.data || []);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        await loadJobs();
+      } catch (err) {
+        if (!mounted) return;
+        setError(err.message || 'Failed to load jobs');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [statusFilter]);
+
+  const onCreateJob = async (event) => {
+    event.preventDefault();
+    setError('');
+    setBanner('');
+
+    try {
+      setSaving(true);
+      await apiPost('/jobs', {
+        title: form.title.trim(),
+        department: form.department.trim() || null,
+        location: form.location.trim() || null,
+        employmentType: form.employmentType.trim() || null,
+        openingsCount: Number(form.openingsCount) || 1,
+        description: form.description.trim() || null,
+      });
+
+      await loadJobs();
+      setForm(defaultJobForm);
+      setShowCreate(false);
+      setBanner('Job created successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to create job');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onToggleStatus = async (job) => {
+    setError('');
+    setBanner('');
+    try {
+      await apiPatch(`/jobs/${job.id}/status`, { isActive: !job.isActive });
+      await loadJobs();
+      setBanner(`Job "${job.title}" moved to ${job.isActive ? 'Closed' : 'Active'}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update job status');
+    }
+  };
+
+  const jobs = useMemo(
+    () =>
+      items
+        .map((job) => ({
+        id: job.id,
+        title: job.title,
+        location: job.location || '-',
+        status: job.isActive ? 'Active' : 'Closed',
+        lead: job.createdBy?.fullName || 'Assigned',
+        applicants: job._count?.applications || 0,
+        shortlisted: shortlistByJob[job.id] || 0,
+        isActive: Boolean(job.isActive),
+      }))
+        .sort((a, b) => {
+          if (sortBy === 'title') return a.title.localeCompare(b.title);
+          return b.applicants - a.applicants;
+        }),
+    [items, shortlistByJob, sortBy],
+  );
+
+  const activeCount = jobs.filter((j) => j.status === 'Active').length;
+
+  return (
+    <EnterpriseLayout
+      sidebar={
+        <EnterpriseSidebar
+          active="jobs"
+          items={enterpriseNavItems}
+          footerLinks={enterpriseFooterLinks}
+          footerButton={
+            canManageJobs ? (
+              <button className="os-btn-primary w-full" onClick={() => setShowCreate((value) => !value)} type="button">
+                + Post New Job
+              </button>
+            ) : null
+          }
+        />
+      }
+      topbar={
+        <EnterpriseTopbar
+          searchPlaceholder="Search jobs, candidates, or applications..."
+          tabs={[
+            { key: 'pipeline', label: 'Pipeline', href: '/pipeline', active: true },
+            { key: 'sourcing', label: 'Sourcing', href: '/sourcing' },
+            { key: 'referrals', label: 'Referrals', href: '/referrals' },
+          ]}
+          right={
+            <>
+              {canManageJobs ? (
+                <button className="os-btn-primary" type="button" onClick={() => setShowCreate((value) => !value)}>
+                  {showCreate ? 'Close Form' : '+ Create Job'}
+                </button>
+              ) : null}
+              <NotificationBell />
+              <UserChip fallbackName="Alex Rivera" fallbackRole="Recruiting Lead" avatarSeed="jobs-user" />
+            </>
+          }
+        />
+      }
+    >
+      <PageEnter>
+        <div className="flex flex-wrap justify-between items-start gap-3">
+          <div>
+            <div className="os-eyebrow">Recruitment Overview</div>
+            <h1 className="os-h1">Job Management</h1>
+          </div>
+          <div className="flex gap-3">
+            <div className="os-card px-4 py-3 text-sm text-[#4f5a77] flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#1f4bc6]">bolt</span>
+              Hiring Velocity <b style={{ color: '#1f4bc6' }}>12.4 days</b>
+            </div>
+            <div className="rounded-2xl bg-[#2455d9] text-white px-4 py-3 text-sm flex items-center gap-2">
+              <span className="material-symbols-outlined">groups</span>
+              Total Active <b>{activeCount} Roles</b>
+            </div>
+          </div>
+        </div>
+
+        {showCreate && canManageJobs ? (
+          <Reveal className="os-card mt-4 p-5">
+            <form className="grid md:grid-cols-2 xl:grid-cols-3 gap-3" onSubmit={onCreateJob}>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Title</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} required />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Department</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.department} onChange={(event) => setForm((prev) => ({ ...prev, department: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Location</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Employment Type</label>
+                <select className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.employmentType} onChange={(event) => setForm((prev) => ({ ...prev, employmentType: event.target.value }))}>
+                  <option>Full-time</option>
+                  <option>Contract</option>
+                  <option>Part-time</option>
+                  <option>Internship</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Openings</label>
+                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" type="number" min="1" value={form.openingsCount} onChange={(event) => setForm((prev) => ({ ...prev, openingsCount: event.target.value }))} />
+              </div>
+              <div className="md:col-span-2 xl:col-span-3">
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Description</label>
+                <textarea className="mt-1 min-h-[90px] w-full rounded-lg border border-[#dbe4ee] px-3 py-2 text-sm" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
+              </div>
+              <div className="md:col-span-2 xl:col-span-3 flex justify-end gap-2">
+                <button className="os-btn-outline" type="button" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button className="os-btn-primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Create Job'}</button>
+              </div>
+            </form>
+          </Reveal>
+        ) : null}
+
+        {error ? <div className="mt-4 os-card p-4 text-red-600 text-sm">{error}</div> : null}
+        {banner ? <div className="mt-4 os-card p-4 text-[#2454cf] text-sm">{banner}</div> : null}
+
+        <Reveal className="os-card mt-4 p-3 flex items-center justify-between">
+          <div className="flex gap-2 text-sm">
+            <button className={`os-btn-outline !h-10 ${statusFilter === 'all' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`} onClick={() => setStatusFilter('all')} type="button">All Roles</button>
+            <button className={`os-btn-outline !h-10 ${statusFilter === 'active' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`} onClick={() => setStatusFilter('active')} type="button">Active</button>
+            <button className={`os-btn-outline !h-10 ${statusFilter === 'closed' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`} onClick={() => setStatusFilter('closed')} type="button">Closed</button>
+          </div>
+          <div className="text-[#7a859f] flex gap-2">
+            <button className="os-icon-btn !h-8 !w-8" type="button" onClick={() => setStatusFilter('active')} title="Show active">
+              <span className="material-symbols-outlined">filter_alt</span>
+            </button>
+            <button className="os-icon-btn !h-8 !w-8" type="button" onClick={() => setSortBy((prev) => (prev === 'newest' ? 'title' : 'newest'))} title="Toggle sort">
+              <span className="material-symbols-outlined">sort</span>
+            </button>
+          </div>
+        </Reveal>
+
+        <div className="space-y-3 mt-4">
+          {loading ? <div className="os-card p-4 text-sm text-[#6f7d98]">Loading jobs...</div> : null}
+          {jobs.map((row, idx) => (
+            <Reveal key={row.id} delay={idx * 0.04}>
+              <div className="os-card px-5 py-4 grid grid-cols-1 md:grid-cols-[1.8fr_.55fr_.62fr_.62fr_.72fr_.9fr] items-start md:items-center gap-4">
+                <div>
+                  <button className="text-xl font-semibold font-[Manrope] text-left" type="button" onClick={() => navigate(`/pipeline?jobId=${row.id}`)}>
+                    {row.title}
+                  </button>
+                  <div className="text-sm text-[#6b7690] mt-1">{row.location}</div>
+                </div>
+                <div className="text-xs uppercase tracking-[.1em] text-[#8f98ad]">{row.status}</div>
+                <div>
+                  <div className="text-xs uppercase tracking-[.1em] text-[#8f98ad]">Applicants</div>
+                  <div className="text-lg mt-1 font-semibold">{row.applicants}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[.1em] text-[#8f98ad]">Shortlisted</div>
+                  <div className="text-lg mt-1 font-semibold text-[#1f52cc]">{row.shortlisted}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[.1em] text-[#8f98ad]">Hiring Lead</div>
+                  <div className="text-sm mt-1">{row.lead}</div>
+                </div>
+                <div className="flex flex-wrap gap-2 md:justify-start">
+                  <button className="os-btn-outline" type="button" onClick={() => navigate(`/pipeline?jobId=${row.id}`)}>
+                    View Pipeline
+                  </button>
+                  {canManageJobs ? (
+                    <button className="os-btn-outline" type="button" onClick={() => onToggleStatus(row)}>
+                      {row.isActive ? 'Close' : 'Reopen'}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-[#7b88a3]">Read Only</span>
+                  )}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        <div className="mt-6 text-sm text-[#687490]">Showing {jobs.length} jobs</div>
+      </PageEnter>
+    </EnterpriseLayout>
+  );
+};
+
+export default JobsManager;
