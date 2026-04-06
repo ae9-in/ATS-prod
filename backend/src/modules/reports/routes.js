@@ -3,11 +3,13 @@ const PDFDocument = require("pdfkit");
 const XLSX = require("xlsx");
 const prisma = require("../../config/prisma");
 const { auth, requireRoles } = require("../../middleware/auth");
+const { verifyAccessToken } = require("../../utils/jwt");
 const { asyncHandler, ApiError } = require("../../utils/errors");
 
 const router = express.Router();
 
-router.use(auth);
+// NOTE: We do NOT use global router.use(auth) here to avoid blocking direct PDF downloads via query tokens.
+// Instead, we apply it manually to each route.
 
 async function buildRecruiterActivity() {
   const users = await prisma.user.findMany({
@@ -238,7 +240,7 @@ function sendPdf(res, reportName, rows) {
 
 router.get(
   "/recruiter-activity",
-  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
+  [auth, requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER")],
   asyncHandler(async (req, res) => {
     const rows = await buildRecruiterActivity();
     res.json({ success: true, data: rows });
@@ -247,7 +249,7 @@ router.get(
 
 router.get(
   "/hiring-progress",
-  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
+  [auth, requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER")],
   asyncHandler(async (req, res) => {
     const rows = await buildHiringProgress();
     res.json({ success: true, data: rows });
@@ -256,7 +258,7 @@ router.get(
 
 router.get(
   "/pipeline-insights",
-  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
+  [auth, requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER")],
   asyncHandler(async (req, res) => {
     const days = Number.parseInt(req.query.days, 10) || 30;
     const boundedDays = Math.min(Math.max(days, 7), 365);
@@ -278,8 +280,27 @@ router.get(
 
 router.get(
   "/export",
-  requireRoles("SUPER_ADMIN", "RECRUITER"),
   asyncHandler(async (req, res) => {
+    // Manually handle auth for the export route to support query-param tokens (Strong Fix)
+    let token = null;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.substring(7).trim();
+    } else if (req.query.token) {
+      token = req.query.token;
+    }
+
+    if (!token) throw new ApiError(401, "Authorization token is required for report export");
+    const payload = verifyAccessToken(token);
+    const user = await prisma.user.findUnique({ 
+      where: { id: payload.userId }, 
+      select: { role: true, id: true, status: true } 
+    });
+    
+    if (!user || user.status !== "ACTIVE") throw new ApiError(401, "Invalid or inactive user");
+    if (!["SUPER_ADMIN", "RECRUITER"].includes(user.role)) throw new ApiError(403, "Forbidden: insufficient permissions");
+    
+    req.user = user; // Set user for potential downstream use
+
     const report = String(req.query.report || "").trim();
     const format = String(req.query.format || "excel").trim().toLowerCase();
 
