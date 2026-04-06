@@ -115,7 +115,7 @@ const SignupPage = () => {
           </h1>
 
           <p className="mt-6 text-xl text-[#d7e2ff] max-w-xl leading-relaxed">
-            Register as Recruiter or Interviewer and collaborate in a role-based hiring platform.
+            Collaborate in a high-performance hiring platform designed for modern recruiting teams.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mt-10 max-w-xl">
@@ -142,7 +142,7 @@ const SignupPage = () => {
         <form className="w-full max-w-md" onSubmit={onSubmit}>
           <h2 className="text-5xl font-bold text-[#121a33] font-[Manrope]">Create Account</h2>
           <p className="mt-3 text-lg text-[#5d6784]">
-            Start with a role-based account and access your ATS workspace.
+            Start your journey and access your ATS workspace.
           </p>
 
           {hasToken() ? (
@@ -183,15 +183,7 @@ const SignupPage = () => {
               value={form.phone}
               onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
             />
-            <div className="grid grid-cols-2 gap-3">
-              <select
-                className="h-12 rounded-xl border border-[#e2e8ef] bg-[#f3f6f8] px-4 text-sm"
-                value={form.role}
-                onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-              >
-                <option value="RECRUITER">HR / Recruiter</option>
-                <option value="INTERVIEWER">Hiring Team / Interviewer</option>
-              </select>
+            <div className="grid grid-cols-1 gap-3">
               <input
                 className="h-12 rounded-xl border border-[#e2e8ef] bg-[#f3f6f8] px-4 text-sm"
                 placeholder="Password"

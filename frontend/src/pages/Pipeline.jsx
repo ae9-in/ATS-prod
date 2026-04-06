@@ -26,6 +26,7 @@ const Pipeline = () => {
   const jobFilterId = query.get('jobId') || '';
   const candidateFilterId = query.get('candidateId') || '';
 
+  const [viewMode, setViewMode] = useState('board'); // 'board' or 'table'
   const [stages, setStages] = useState([]);
   const [applications, setApplications] = useState([]);
   const [candidates, setCandidates] = useState([]);
@@ -233,17 +234,22 @@ const Pipeline = () => {
       topbar={
         <EnterpriseTopbar
           searchPlaceholder="Search candidates, jobs, or tasks..."
+          tabs={[
+            { key: 'pipeline', label: 'Pipeline', href: '/pipeline', active: true },
+            { key: 'sourcing', label: 'Sourcing', href: '/sourcing' },
+            { key: 'referrals', label: 'Referrals', href: '/referrals' },
+          ]}
           right={
             <>
               <NotificationBell />
               {canCreateApplication ? (
                 <button className="os-btn-primary" type="button" onClick={() => setShowCreate((value) => !value)}>
-                  {showCreate ? 'Close Form' : 'Add Application'}
+                  {showCreate ? 'Close Form' : 'Add App'}
                 </button>
               ) : null}
               {canCreateApplication ? (
                 <button className="os-btn-outline" type="button" onClick={() => setShowStageCreate((value) => !value)}>
-                  {showStageCreate ? 'Close Stage Form' : 'Add Stage'}
+                  {showStageCreate ? 'Close Stage' : 'Add Stage'}
                 </button>
               ) : null}
               <UserChip fallbackName={currentUser?.fullName || 'Marcus Thorne'} fallbackRole={String(currentUser?.role || 'Head of Talent').replace('_', ' ')} avatarSeed="pipeline-user" />
@@ -345,82 +351,151 @@ const Pipeline = () => {
         {loading ? <div className="mt-4 os-card p-4 text-sm text-[#6f7d98]">Loading pipeline...</div> : null}
         {(jobFilterId || candidateFilterId) ? (
           <div className="mt-4 os-card p-3 flex items-center justify-between text-sm">
-            <div className="text-[#5f6a84]">Filtered view {jobFilterId ? '(Job)' : ''} {candidateFilterId ? '(Candidate)' : ''}</div>
+            <div className="flex items-center gap-4">
+              <div className="text-[#5f6a84]">Filtered view {jobFilterId ? '(Job)' : ''} {candidateFilterId ? '(Candidate)' : ''}</div>
+              <div className="flex bg-[#f2f5f8] rounded-lg p-1 gap-1">
+                <button
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${viewMode === 'board' ? 'bg-white shadow-sm text-[#1f52cc]' : 'text-[#7a88a3]'}`}
+                  onClick={() => setViewMode('board')}
+                >
+                  Board
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-[#1f52cc]' : 'text-[#7a88a3]'}`}
+                  onClick={() => setViewMode('table')}
+                >
+                  Table
+                </button>
+              </div>
+            </div>
             <button className="os-btn-outline !h-9" type="button" onClick={() => navigate('/pipeline')}>Clear Filter</button>
           </div>
-        ) : null}
-
-        <div className="mt-4 overflow-x-auto pb-2">
-          <div className="grid grid-flow-col auto-cols-[330px] gap-4">
-            {columns.map((column, idx) => (
-              <Reveal key={column.id} delay={idx * 0.03}>
-                <div className="rounded-2xl border border-[#e2e8ef] bg-[#f6fafb] p-3 min-h-[520px]">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="font-semibold text-sm">{column.name}</div>
-                    <div className="text-xs text-[#8090ad]">{column.items.length}</div>
-                  </div>
-                  <div className="space-y-3">
-                    {column.items.map((app) => (
-                      <div key={app.id} className="os-card p-3">
-                        <div className="flex items-center gap-2">
-                          <img className="w-9 h-9 rounded-lg" src={`https://i.pravatar.cc/80?u=${app.candidate?.id || app.id}`} alt={app.candidate?.fullName || 'candidate'} />
-                          <div className="min-w-0">
-                            <button className="text-sm font-semibold text-left w-full truncate leading-5" type="button" onClick={() => navigate(`/candidate/${app.candidate?.id || ''}`)}>
-                              {app.candidate?.fullName || 'Candidate'}
-                            </button>
-                            <div className="text-xs text-[#7a88a3] truncate text-left">{app.job?.title || 'Role'}</div>
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className={`text-[11px] uppercase tracking-[.1em] ${app.shortlisted ? 'text-[#218b55]' : 'text-[#7a88a3]'}`}>
-                              {app.shortlisted ? 'Shortlisted' : 'Not Shortlisted'}
-                            </span>
-                            {canCreateApplication ? (
-                              <button className="os-btn-outline !h-8 !px-2 !text-[11px]" type="button" onClick={() => onToggleShortlist(app)}>
-                                {app.shortlisted ? 'Remove' : 'Shortlist'}
-                              </button>
-                            ) : null}
-                          </div>
-                          <select
-                            className="h-9 w-full rounded-lg border border-[#dbe4ee] px-2 text-xs"
-                            value={selectedStages[app.id] || ''}
-                            onChange={(event) => setSelectedStages((prev) => ({ ...prev, [app.id]: event.target.value }))}
-                            disabled={!canMovePipeline}
-                          >
-                            {stages.map((stage) => (
-                              <option key={stage.id} value={stage.id}>{stage.name}</option>
-                            ))}
-                          </select>
-                          <div className="mt-2 flex gap-2">
-                            {canMovePipeline ? (
-                              <button className="os-btn-primary !h-9 flex-1" type="button" onClick={() => onMoveStage(app.id)} disabled={movingId === app.id}>
-                                {movingId === app.id ? 'Moving...' : 'Move'}
-                              </button>
-                            ) : (
-                              <div className="os-btn-outline !h-9 flex-1 !justify-center !cursor-default">Read Only</div>
-                            )}
-                            <button className="os-btn-outline !h-9 flex-1" type="button" onClick={() => onLoadHistory(app.id)}>
-                              History
-                            </button>
-                          </div>
-                        </div>
-
-                        {(historyByApp[app.id] || []).length > 0 ? (
-                          <div className="mt-3 text-[11px] text-[#5f6b86] border-t border-[#edf1f6] pt-2">
-                            Last move: {(historyByApp[app.id][0]?.toStage?.name || 'Unknown')} by {(historyByApp[app.id][0]?.movedBy?.fullName || 'System')}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                    {column.items.length === 0 ? <div className="text-xs os-muted">No applications.</div> : null}
-                  </div>
-                </div>
-              </Reveal>
-            ))}
+        ) : (
+          <div className="mt-4 flex justify-end">
+            <div className="flex bg-[#f2f5f8] rounded-lg p-1 gap-1">
+              <button
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${viewMode === 'board' ? 'bg-white shadow-sm text-[#1f52cc]' : 'text-[#7a88a3]'}`}
+                onClick={() => setViewMode('board')}
+              >
+                Kanban Board
+              </button>
+              <button
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-[#1f52cc]' : 'text-[#7a88a3]'}`}
+                onClick={() => setViewMode('table')}
+              >
+                Candidate Table
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {viewMode === 'board' ? (
+          <div className="mt-4 overflow-x-auto pb-4">
+            <div className="flex gap-4 min-w-max pb-2">
+              {columns.map((column, idx) => (
+                <Reveal key={column.id} delay={idx * 0.03}>
+                  <div className="rounded-2xl border border-[#e2e8ef] bg-[#f6fafb] p-3 min-h-[520px] w-[320px] shrink-0 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-semibold text-sm">{column.name}</div>
+                      <div className="text-xs text-[#8090ad]">{column.items.length}</div>
+                    </div>
+                    <div className="space-y-3">
+                      {column.items.map((app) => (
+                        <div key={app.id} className="os-card p-3">
+                          <div className="flex items-center gap-2">
+                            <img className="w-9 h-9 rounded-lg" src={`https://i.pravatar.cc/80?u=${app.candidate?.id || app.id}`} alt={app.candidate?.fullName || 'candidate'} />
+                            <div className="min-w-0">
+                              <button className="text-sm font-semibold text-left w-full truncate leading-5" type="button" onClick={() => navigate(`/candidate/${app.candidate?.id || ''}`)}>
+                                {app.candidate?.fullName || 'Candidate'}
+                              </button>
+                              <div className="text-xs text-[#7a88a3] truncate text-left">{app.job?.title || 'Role'}</div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className={`text-[11px] uppercase tracking-[.1em] ${app.shortlisted ? 'text-[#218b55]' : 'text-[#7a88a3]'}`}>
+                                {app.shortlisted ? 'Shortlisted' : 'Not Shortlisted'}
+                              </span>
+                              {canCreateApplication ? (
+                                <button className="os-btn-outline !h-8 !px-2 !text-[11px]" type="button" onClick={() => onToggleShortlist(app)}>
+                                  {app.shortlisted ? 'Remove' : 'Shortlist'}
+                                </button>
+                              ) : null}
+                            </div>
+                            <select
+                              className="h-9 w-full rounded-lg border border-[#dbe4ee] px-2 text-xs"
+                              value={selectedStages[app.id] || ''}
+                              onChange={(event) => setSelectedStages((prev) => ({ ...prev, [app.id]: event.target.value }))}
+                              disabled={!canMovePipeline}
+                            >
+                              {stages.map((stage) => (
+                                <option key={stage.id} value={stage.id}>{stage.name}</option>
+                              ))}
+                            </select>
+                            <div className="mt-2 flex gap-2">
+                              {canMovePipeline ? (
+                                <button className="os-btn-primary !h-9 flex-1" type="button" onClick={() => onMoveStage(app.id)} disabled={movingId === app.id}>
+                                  {movingId === app.id ? 'Moving...' : 'Move'}
+                                </button>
+                              ) : (
+                                <div className="os-btn-outline !h-9 flex-1 !justify-center !cursor-default">Read Only</div>
+                              )}
+                              <button className="os-btn-outline !h-9 flex-1" type="button" onClick={() => onLoadHistory(app.id)}>
+                                History
+                              </button>
+                            </div>
+                          </div>
+
+                          {(historyByApp[app.id] || []).length > 0 ? (
+                            <div className="mt-3 text-[11px] text-[#5f6b86] border-t border-[#edf1f6] pt-2">
+                              Last move: {(historyByApp[app.id][0]?.toStage?.name || 'Unknown')} by {(historyByApp[app.id][0]?.movedBy?.fullName || 'System')}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                      {column.items.length === 0 ? <div className="text-xs os-muted">No applications.</div> : null}
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Reveal className="os-card mt-4 overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#f8fafc] text-[#7a88a3] text-[11px] uppercase tracking-[.15em] border-b border-[#e2e8f0]">
+                <tr>
+                  <th className="px-5 py-3">Candidate</th>
+                  <th className="px-5 py-3">Current Stage</th>
+                  <th className="px-5 py-3">Job Title</th>
+                  <th className="px-5 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications.map((app) => (
+                  <tr key={app.id} className="border-b border-[#f1f5f9] hover:bg-[#f9fafb] transition-colors">
+                    <td className="px-5 py-4 font-semibold text-[#101c43]">{app.candidate?.fullName}</td>
+                    <td className="px-5 py-4">
+                      <span className="bg-[#ebf3ff] text-[#1f52cc] px-2 py-1 rounded-md font-medium text-xs">
+                        {app.currentStage?.name || 'Unassigned'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-[#5e6b86]">{app.job?.title}</td>
+                    <td className="px-5 py-4">
+                      <button className="os-btn-outline !h-8 !px-3" onClick={() => navigate(`/candidate/${app.candidate?.id}`)}>View Profile</button>
+                    </td>
+                  </tr>
+                ))}
+                {applications.length === 0 ? (
+                  <tr>
+                    <td className="px-5 py-10 text-center os-muted" colSpan={4}>No applications currently in this pipeline view.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </Reveal>
+        )}
       </PageEnter>
     </EnterpriseLayout>
   );

@@ -38,13 +38,15 @@ const InterviewSchedule = () => {
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
   const [feedbackForm, setFeedbackForm] = useState(emptyFeedbackForm);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [savingFeedback, setSavingFeedback] = useState(false);
-  const [recordingFile, setRecordingFile] = useState(null);
   const [uploadingRecording, setUploadingRecording] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [recordedUrl, setRecordedUrl] = useState('');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [viewMode, setViewMode] = useState('list');
+  const [viewDate, setViewDate] = useState(new Date());
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -81,11 +83,14 @@ const InterviewSchedule = () => {
 
     const load = async () => {
       try {
+        setLoading(true);
         setError('');
         await loadAll();
       } catch (err) {
         if (!mounted) return;
         setError(err.message || 'Failed to load interviews');
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
@@ -94,6 +99,53 @@ const InterviewSchedule = () => {
       mounted = false;
     };
   }, []);
+ 
+  const downloadDailyPdf = async () => {
+    try {
+      const year = viewDate.getFullYear();
+      const month = String(viewDate.getMonth() + 1).padStart(2, '0');
+      const day = String(viewDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      const token = localStorage.getItem('ats_token');
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&date=${dateStr}&token=${token}`;
+      
+      // Strong Fix: Use a native browser download link
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.target = '_blank';
+      a.download = `interviews-${dateStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setBanner(`Interviews for ${dateStr} export started.`);
+    } catch (err) {
+      setError(err.message || 'Failed to start download');
+    }
+  };
+ 
+  const calendarDays = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+ 
+    const days = [];
+    const offset = firstDay === 0 ? 6 : firstDay - 1; // Mon-Sun
+    for (let i = offset; i > 0; i -= 1) {
+      days.push({ day: prevMonthDays - i + 1, month: 'prev', date: new Date(year, month - 1, prevMonthDays - i + 1) });
+    }
+    for (let i = 1; i <= daysInMonth; i += 1) {
+      days.push({ day: i, month: 'current', date: new Date(year, month, i) });
+    }
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i += 1) {
+      days.push({ day: i, month: 'next', date: new Date(year, month + 1, i) });
+    }
+    return days;
+  }, [viewDate]);
 
   const selectedInterview = useMemo(
     () => interviews.find((item) => item.id === selectedId) || interviews[0] || null,
@@ -291,7 +343,7 @@ const InterviewSchedule = () => {
 
   return (
     <EnterpriseLayout
-      sidebar={<EnterpriseSidebar active="interviews" items={enterpriseNavItems} footerLinks={enterpriseFooterLinks} footerButton={<button className="os-btn-primary w-full" type="button" onClick={() => navigate('/schedule')}>Interview Hub</button>} />}
+      sidebar={<EnterpriseSidebar active="interviews" items={enterpriseNavItems} footerLinks={enterpriseFooterLinks} />}
       topbar={
         <EnterpriseTopbar
           searchPlaceholder="Search conversations or candidates..."
@@ -313,9 +365,50 @@ const InterviewSchedule = () => {
       }
       contentClassName="!p-0"
     >
-      <PageEnter className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr_320px] h-[calc(100vh-70px)]">
+      <div className="flex items-center justify-between px-5 h-14 bg-white border-b border-[#e4ebf1]">
+        <div className="flex gap-2">
+          <button
+            className={`os-btn-outline !h-9 ${viewMode === 'list' ? '!bg-[#1f52cc] !text-white' : ''}`}
+            onClick={() => setViewMode('list')}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-sm">list</span>
+            List View
+          </button>
+          <button
+            className={`os-btn-outline !h-9 ${viewMode === 'calendar' ? '!bg-[#1f52cc] !text-white' : ''}`}
+            onClick={() => setViewMode('calendar')}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-sm">calendar_month</span>
+            Calendar Grid
+          </button>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-semibold text-[#142651]">
+            {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </div>
+          <div className="flex border border-[#dbe4ee] rounded-lg overflow-hidden">
+            <button className="p-1 px-2 hover:bg-[#f6f9fc] border-r border-[#dbe4ee]" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}>
+              <span className="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            <button className="p-1 px-2 hover:bg-[#f6f9fc]" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}>
+              <span className="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+          <button className="os-btn-primary !h-9" onClick={downloadDailyPdf}>
+            <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+            Daily PDF
+          </button>
+        </div>
+      </div>
+      <PageEnter className={`grid grid-cols-1 ${viewMode === 'list' ? 'lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr_320px]' : 'lg:grid-cols-1'} h-[calc(100vh-126px)] overflow-hidden`}>
+        {viewMode === 'list' && (
         <Reveal className="bg-white border-r border-[#e4ebf1] p-4 overflow-auto max-h-[42vh] lg:max-h-none">
-          <h2 className="text-2xl font-semibold font-[Manrope] px-2 pb-4">Interviews</h2>
+          <div className="flex items-center justify-between pb-4">
+            <h2 className="text-2xl font-semibold font-[Manrope] px-2">Interviews</h2>
+            {loading ? <div className="text-xs text-[#a1acbd] animate-pulse">Syncing...</div> : null}
+          </div>
           {interviews.map((row) => {
             const candidate = row.application?.candidate;
             return (
@@ -338,6 +431,46 @@ const InterviewSchedule = () => {
           })}
           {interviews.length === 0 ? <div className="text-sm os-muted px-2">No interviews found.</div> : null}
         </Reveal>
+        )}
+ 
+        {viewMode === 'calendar' ? (
+          <Reveal delay={0.06} className="bg-white p-6 overflow-auto lg:col-span-2 xl:col-span-3">
+            <div className="calendar-grid">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                <div key={day} className="calendar-day-label">{day}</div>
+              ))}
+              {calendarDays.map((cell, idx) => {
+                const dayInterviews = interviews.filter((item) => {
+                  const d = new Date(item.scheduledStart);
+                  return d.getDate() === cell.day && d.getMonth() === cell.date.getMonth() && d.getFullYear() === cell.date.getFullYear();
+                });
+                const isToday = new Date().toDateString() === cell.date.toDateString();
+                const isOtherMonth = cell.month !== 'current';
+ 
+                return (
+                  <div
+                    key={`${cell.month}-${cell.day}-${idx}`}
+                    className={`calendar-cell ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} cursor-pointer`}
+                    onClick={() => {
+                      if (dayInterviews.length > 0) {
+                        setSelectedId(dayInterviews[0].id);
+                        setViewMode('list');
+                      }
+                    }}
+                  >
+                    <div className="calendar-date-num">{cell.day}</div>
+                    {dayInterviews.map((item) => (
+                      <div key={item.id} className={`calendar-event result-${item.result?.toLowerCase() || 'pending'}`}>
+                        {new Date(item.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {item.application?.candidate?.fullName || 'Interview'}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+        ) : (
+          <>
 
         <Reveal delay={0.04} className="bg-[#eef3f3] border-r border-[#e4ebf1] flex flex-col overflow-auto max-h-[58vh] lg:max-h-none">
           <div className="h-16 bg-white border-b border-[#e4ebf1] px-5 flex items-center justify-between">
@@ -345,9 +478,9 @@ const InterviewSchedule = () => {
               <div className="w-10 h-10 rounded-xl bg-[#b7c7f2] text-[#2f4ea8] text-sm font-semibold flex items-center justify-center">
                 {(selectedCandidate?.fullName || 'C').slice(0, 2).toUpperCase()}
               </div>
-              <div className="min-w-0">
-                <div className="text-xl font-semibold font-[Manrope] truncate">{selectedCandidate?.fullName || 'Candidate'}</div>
-                <div className="text-[#2ca764] text-xs">{selectedInterview ? 'Interview Active' : 'No active interview'}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xl font-semibold font-[Manrope] truncate">{selectedCandidate?.fullName || (loading ? 'Loading...' : 'Candidate')}</div>
+                <div className={selectedInterview ? 'text-[#2ca764] text-xs' : 'text-[#8c97ad] text-xs'}>{selectedInterview ? 'Interview Active' : 'No active interview'}</div>
               </div>
             </div>
             <div className="text-[#6d7893] flex gap-3">
@@ -495,6 +628,8 @@ const InterviewSchedule = () => {
             </button>
           </div>
         </Reveal>
+        </>
+        )}
       </PageEnter>
     </EnterpriseLayout>
   );

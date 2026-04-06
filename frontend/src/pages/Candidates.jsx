@@ -217,6 +217,11 @@ const Candidates = () => {
       topbar={
         <EnterpriseTopbar
           searchPlaceholder="Search candidates, skills, or stages..."
+          tabs={[
+            { key: 'pipeline', label: 'Pipeline', href: '/pipeline' },
+            { key: 'sourcing', label: 'Sourcing', href: '/sourcing' },
+            { key: 'referrals', label: 'Referrals', href: '/referrals' },
+          ]}
           right={
             <>
               <NotificationBell />

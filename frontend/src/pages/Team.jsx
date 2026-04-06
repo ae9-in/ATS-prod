@@ -16,16 +16,21 @@ const fallbackMembers = [
 const Team = () => {
   const navigate = useNavigate();
   const [members, setMembers] = useState(fallbackMembers);
+  const [me, setMe] = useState(null);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const res = await apiGet('/users');
+        const [usersRes, meRes] = await Promise.all([
+          apiGet('/users'),
+          apiGet('/auth/me')
+        ]);
         if (!mounted) return;
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setMembers(res.data);
+        setMe(meRes.data || null);
+        if (Array.isArray(usersRes.data) && usersRes.data.length > 0) {
+          setMembers(usersRes.data);
         }
       } catch (_) {
         // Recruiters/interviewers may not have permission for users endpoint.
@@ -40,8 +45,23 @@ const Team = () => {
 
   return (
     <EnterpriseLayout
-      sidebar={<EnterpriseSidebar active="pool" items={enterpriseNavItems} footerLinks={enterpriseFooterLinks} footerButton={<button className="os-btn-primary w-full" type="button" onClick={() => navigate('/settings')}>+ Invite Member</button>} />}
-      topbar={<EnterpriseTopbar searchPlaceholder="Search team members, roles, or permissions..." right={<><NotificationBell /><UserChip fallbackName="Alex Sterling" fallbackRole="Admin" avatarSeed="team-user" /></>} />}
+      sidebar={<EnterpriseSidebar active="pool" items={enterpriseNavItems} footerLinks={enterpriseFooterLinks} footerButton={me?.role === 'SUPER_ADMIN' ? <button className="os-btn-primary w-full" type="button" onClick={() => navigate('/settings')}>+ Invite Member</button> : null} />}
+      topbar={
+        <EnterpriseTopbar
+          searchPlaceholder="Search team members, roles, or permissions..."
+          tabs={[
+            { key: 'pipeline', label: 'Pipeline', href: '/pipeline' },
+            { key: 'sourcing', label: 'Sourcing', href: '/sourcing' },
+            { key: 'referrals', label: 'Referrals', href: '/referrals' },
+          ]}
+          right={
+            <>
+              <NotificationBell />
+              <UserChip fallbackName="Alex Sterling" fallbackRole="Admin" avatarSeed="team-user" />
+            </>
+          }
+        />
+      }
     >
       <PageEnter>
         <div>

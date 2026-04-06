@@ -169,6 +169,11 @@ const Dashboard = () => {
       topbar={
         <EnterpriseTopbar
           searchPlaceholder="Search candidates, jobs, or tasks..."
+          tabs={[
+            { key: 'pipeline', label: 'Pipeline', href: '/pipeline' },
+            { key: 'sourcing', label: 'Sourcing', href: '/sourcing' },
+            { key: 'referrals', label: 'Referrals', href: '/referrals' },
+          ]}
           right={
             <>
               <NotificationBell />

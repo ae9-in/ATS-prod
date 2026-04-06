@@ -283,8 +283,55 @@ router.get(
     const report = String(req.query.report || "").trim();
     const format = String(req.query.format || "excel").trim().toLowerCase();
 
-    if (!["recruiter-activity", "hiring-progress"].includes(report)) {
-      throw new ApiError(400, "report must be recruiter-activity or hiring-progress");
+    if (report === "dailyinterviews") {
+      const { date } = req.query;
+      if (!date) throw new ApiError(400, "Date is required (YYYY-MM-DD)");
+
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(`${date}T23:59:59.999Z`);
+
+      const interviews = await prisma.interview.findMany({
+        where: { scheduledStart: { gte: start, lte: end } },
+        include: {
+          application: {
+            include: {
+              candidate: { select: { fullName: true, email: true, phone: true } },
+              job: { select: { title: true } },
+            },
+          },
+          interviewer: { select: { fullName: true } },
+        },
+        orderBy: { scheduledStart: "asc" },
+      });
+
+      res.setHeader("Content-Disposition", `attachment; filename="interviews-${date}.pdf"`);
+      res.setHeader("Content-Type", "application/pdf");
+
+      const doc = new PDFDocument({ margin: 50 });
+      doc.pipe(res);
+
+      doc.fontSize(22).fillColor("#071f52").text("Daily Interview Schedule", { align: "center" });
+      doc.fontSize(12).fillColor("#6b7895").text(`Date: ${date}`, { align: "center" });
+      doc.moveDown(2.5);
+
+      if (interviews.length === 0) {
+        doc.fontSize(14).fillColor("#0f1b3d").text("No interviews scheduled for this day.", { align: "center" });
+      } else {
+        interviews.forEach((item) => {
+          const timeStr = new Date(item.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          doc.fontSize(13).fillColor("#071f52").text(`${timeStr} - ${item.application?.candidate?.fullName || "N/A"}`, { underline: true });
+          doc.fontSize(10).fillColor("#333").text(`Round: ${item.roundNo} | Role: ${item.application?.job?.title || "General"}`);
+          doc.text(`Interviewer: ${item.interviewer?.fullName || "N/A"} | Mode: ${item.mode}`);
+          doc.fillColor("#666").text(`Contact: ${item.application?.candidate?.email || item.application?.candidate?.phone || "N/A"}`);
+          doc.moveDown(1.5);
+        });
+      }
+      doc.end();
+      return;
+    }
+
+    if (!["recruiter-activity", "hiring-progress", "dailyinterviews"].includes(report)) {
+      throw new ApiError(400, `Invalid report type: [${report}]. Must be recruiter-activity or hiring-progress`);
     }
     if (!["excel", "pdf"].includes(format)) {
       throw new ApiError(400, "format must be excel or pdf");

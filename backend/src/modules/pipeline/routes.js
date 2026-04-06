@@ -24,14 +24,16 @@ router.get(
 
     let stages = [];
     if (jobId) {
-      const jobStages = await prisma.pipelineStage.findMany({
-        where: { jobId },
+      stages = await prisma.pipelineStage.findMany({
+        where: {
+          OR: [
+            { jobId },
+            { jobId: null }
+          ]
+        },
         orderBy: { sortOrder: "asc" },
       });
-      stages = jobStages;
-    }
-
-    if (stages.length === 0) {
+    } else {
       stages = await prisma.pipelineStage.findMany({
         where: { jobId: null },
         orderBy: { sortOrder: "asc" },

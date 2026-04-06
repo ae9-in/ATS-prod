@@ -276,9 +276,8 @@ const Settings = () => {
                 <input className="h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm" placeholder="Phone" value={userForm.phone} onChange={(event) => setUserForm((prev) => ({ ...prev, phone: event.target.value }))} />
                 <input className="h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm" placeholder="Password" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} required />
                 <select className="h-10 rounded-lg border border-[#dbe4ee] px-3 text-sm" value={userForm.role} onChange={(event) => setUserForm((prev) => ({ ...prev, role: event.target.value }))}>
-                  <option value="RECRUITER">RECRUITER</option>
-                  <option value="INTERVIEWER">INTERVIEWER</option>
-                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                  <option value="RECRUITER">Internal User (Recruiter/Team)</option>
+                  <option value="SUPER_ADMIN">System Administrator</option>
                 </select>
                 <div className="flex justify-end">
                   <button className="os-btn-primary" type="submit" disabled={savingCreate}>{savingCreate ? 'Saving...' : 'Save User'}</button>
@@ -315,9 +314,8 @@ const Settings = () => {
                       <input className="h-9 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={editForm.phone} onChange={(event) => setEditForm((prev) => ({ ...prev, phone: event.target.value }))} />
                       <div className="flex gap-2">
                         <select className="h-9 rounded-lg border border-[#dbe4ee] px-2 text-sm flex-1" value={editForm.role} onChange={(event) => setEditForm((prev) => ({ ...prev, role: event.target.value }))}>
-                          <option value="RECRUITER">RECRUITER</option>
-                          <option value="INTERVIEWER">INTERVIEWER</option>
-                          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                          <option value="RECRUITER">Internal User</option>
+                          <option value="SUPER_ADMIN">System Administrator</option>
                         </select>
                         <button className="os-btn-primary !h-9" type="button" onClick={onSaveEdit} disabled={savingEdit}>
                           {savingEdit ? '...' : 'Save'}

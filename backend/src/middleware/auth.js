@@ -3,10 +3,22 @@ const { verifyAccessToken } = require("../utils/jwt");
 const { ApiError } = require("../utils/errors");
 
 async function auth(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const [type, token] = authHeader.split(" ");
+  let token = null;
 
-  if (type !== "Bearer" || !token) {
+  // 1. Try Authorization Header
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    token = authHeader.substring(7).trim();
+  }
+
+  // 2. Try Query Parameter (Support direct downloads)
+  if (!token && req.query.token) {
+    token = req.query.token;
+    console.log(`[AUTH] Using query token for ${req.path}`);
+  }
+
+  if (!token) {
+    console.log(`[AUTH] No token found for ${req.path}`);
     return next(new ApiError(401, "Authorization token is required"));
   }
 

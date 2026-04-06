@@ -67,6 +67,12 @@ export function EnterpriseSidebar({
       </nav>
 
       <div className="os-sidebar-footer">
+        {role !== 'INTERVIEWER' && (
+          <Link to="/schedule" className="os-btn-primary w-full text-center h-11 mb-3 flex items-center justify-center gap-2 no-underline text-white">
+            <span className="material-symbols-outlined text-xl">hub</span>
+            Interview Hub
+          </Link>
+        )}
         {footerButton}
         {visibleLinks.map((link) => (
           <NavItem key={link.key} item={link} className="os-footer-link" />
