@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { PageEnter, Reveal } from '../components/PageMotion';
@@ -121,7 +121,7 @@ const LandingPage = () => {
               <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-primary h-12 px-8" onClick={() => { window.location.href = '/signup'; }}>
                 Start Free Trial
               </motion.button>
-              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-outline h-12 px-8 bg-white/8 border-white/35 text-white" onClick={() => { window.location.href = '/login'; }}>
+              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-outline h-12 px-8 !bg-transparent border-white/35 text-white" onClick={() => { window.location.href = '/login'; }}>
                 View Demo
               </motion.button>
             </div>
