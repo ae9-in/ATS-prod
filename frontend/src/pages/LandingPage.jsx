@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { PageEnter, Reveal } from '../components/PageMotion';
 
@@ -28,6 +28,7 @@ const talentBits = [
 const marqueeItems = ['AI Scoring', 'Smart Shortlists', 'Interview Copilot', 'Auto Ranking', 'Skills Graph', 'Bias Guard', 'Offer Velocity'];
 
 const LandingPage = () => {
+  const navigate = useNavigate();
   const [secondaryImg, setSecondaryImg] = useState(
     'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1400&q=80',
   );
@@ -64,10 +65,10 @@ const LandingPage = () => {
         <nav className="h-16 bg-white border-b border-[#e4ebf2] px-6 md:px-10 flex items-center justify-between sticky top-0 z-50 shadow-[0_1px_0_rgba(9,20,53,.05)]">
           <div className="text-[42px] leading-none font-extrabold text-[#183f96] font-[Manrope] tracking-[-0.02em]">ATS</div>
           <div className="hidden md:flex items-center gap-8 text-sm text-[#4b5876]">
-            <a href="/pipeline" className="text-[#1f4bc6] border-b-2 border-[#1f4bc6] pb-1">Platform</a>
-            <a href="/sourcing">Solutions</a>
-            <a href="/careers">Resources</a>
-            <a href="/signup">Pricing</a>
+            <Link to="/pipeline" className="text-[#1f4bc6] border-b-2 border-[#1f4bc6] pb-1">Platform</Link>
+            <Link to="/sourcing">Solutions</Link>
+            <Link to="/careers">Resources</Link>
+            <Link to="/signup">Pricing</Link>
           </div>
           <div className="flex items-center gap-4">
             <Link className="text-sm font-medium text-[#16213f]" to="/login">Log In</Link>
@@ -118,10 +119,10 @@ const LandingPage = () => {
               Deploy AI-driven workflows to identify, assess, and onboard top-tier talent in minutes, not months.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-primary h-12 px-8" onClick={() => { window.location.href = '/signup'; }}>
+              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-primary h-12 px-8" onClick={() => { navigate('/signup'); }}>
                 Start Free Trial
               </motion.button>
-              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-outline h-12 px-8 !bg-transparent border-white/35 text-white" onClick={() => { window.location.href = '/login'; }}>
+              <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} className="os-btn-outline h-12 px-8 !bg-transparent border-white/35 text-white" onClick={() => { navigate('/login'); }}>
                 View Demo
               </motion.button>
             </div>
