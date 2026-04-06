@@ -508,7 +508,15 @@ const InterviewSchedule = () => {
               <div>Status: {selectedInterview?.result || '-'}</div>
               <div>Date: {selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
               {selectedInterview?.voiceRecordingFile?.storageKey ? (
-                <a className="text-[#1f4bc6] inline-block mt-2" href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${selectedInterview.voiceRecordingFile.storageKey}`} target="_blank" rel="noreferrer">
+                <a 
+                  className="text-[#1f4bc6] inline-block mt-2" 
+                  href={selectedInterview.voiceRecordingFile.storageKey?.startsWith('http')
+                    ? selectedInterview.voiceRecordingFile.storageKey
+                    : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${selectedInterview.voiceRecordingFile.storageKey}`
+                  } 
+                  target="_blank" 
+                  rel="noreferrer"
+                >
                   Listen Recording: {selectedInterview.voiceRecordingFile.originalName}
                 </a>
               ) : null}

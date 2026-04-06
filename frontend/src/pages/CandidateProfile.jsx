@@ -280,7 +280,15 @@ const CandidateProfile = () => {
                       <div className="text-xs text-[#7b88a3]">Read only for your role.</div>
                     )}
                     {candidate.resumeFile?.storageKey ? (
-                      <a className="text-sm text-[#1f4bc6] mt-2 inline-block" href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${candidate.resumeFile.storageKey}`} target="_blank" rel="noreferrer">
+                      <a 
+                        className="text-sm text-[#1f4bc6] mt-2 inline-block" 
+                        href={candidate.resumeFile.storageKey?.startsWith('http') 
+                          ? candidate.resumeFile.storageKey 
+                          : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${candidate.resumeFile.storageKey}`
+                        } 
+                        target="_blank" 
+                        rel="noreferrer"
+                      >
                         View Current Resume: {candidate.resumeFile.originalName}
                       </a>
                     ) : null}

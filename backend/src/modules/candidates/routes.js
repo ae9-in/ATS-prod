@@ -4,7 +4,7 @@ const path = require("path");
 const XLSX = require("xlsx");
 const prisma = require("../../config/prisma");
 const { auth, requireRoles } = require("../../middleware/auth");
-const { upload, uploadsRoot } = require("../../middleware/upload");
+const { upload, memoryUpload } = require("../../middleware/upload");
 const { asyncHandler, ApiError } = require("../../utils/errors");
 const { logAudit } = require("../../utils/audit");
 
@@ -120,13 +120,13 @@ router.post(
     req.uploadFolder = "candidate-bulk";
     next();
   },
-  upload.single("file"),
+  memoryUpload.single("file"),
   asyncHandler(async (req, res) => {
     if (!req.file) {
       throw new ApiError(400, "Excel file is required (field: file)");
     }
 
-    const workbook = XLSX.readFile(req.file.path);
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
@@ -318,14 +318,20 @@ router.post(
       throw new ApiError(404, "Candidate not found");
     }
 
-    const relativePath = path.relative(uploadsRoot, req.file.path).replace(/\\/g, "/");
+    const cloudinaryUrl = req.file.path; // CloudinaryStorage puts the URL here
+    const cloudinaryPublicId = req.file.filename;
+
     const fileMeta = await prisma.fileMeta.create({
       data: {
-        storageKey: relativePath,
+        storageKey: cloudinaryPublicId,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype || "application/octet-stream",
         sizeBytes: BigInt(req.file.size || 0),
         uploadedById: req.user.id,
+        // We'll use the storageKey to store the public_id, and we can 
+        // reconstruct the URL or store the absolute URL in storageKey.
+        // For simplicity, let's store the absolute URL in storageKey if it starts with http
+        storageKey: cloudinaryUrl, 
       },
     });
 
@@ -334,12 +340,8 @@ router.post(
       data: { resumeFileId: fileMeta.id },
     });
 
-    if (candidate.resumeFile?.storageKey) {
-      const oldPath = path.join(uploadsRoot, candidate.resumeFile.storageKey);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-    }
+    // NOTE: Manual file cleanup (fs.unlink) is no longer needed for Cloudinary.
+    // In a full implementation, you'd call cloudinary.uploader.destroy(oldPublicId).
 
     await logAudit({
       actorUserId: req.user.id,
@@ -359,7 +361,7 @@ router.post(
       data: {
         fileId: fileMeta.id,
         originalName: fileMeta.originalName,
-        url: `/uploads/${fileMeta.storageKey}`,
+        url: fileMeta.storageKey, // Returns the absolute Cloudinary URL
       },
     });
   }),

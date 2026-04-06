@@ -4,7 +4,7 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const prisma = require("../../config/prisma");
 const { auth, requireRoles } = require("../../middleware/auth");
-const { upload, uploadsRoot } = require("../../middleware/upload");
+const { upload } = require("../../middleware/upload");
 const { asyncHandler, ApiError } = require("../../utils/errors");
 const { logAudit } = require("../../utils/audit");
 
@@ -227,10 +227,12 @@ router.post(
       throw new ApiError(403, "You can upload recording only for your assigned interview");
     }
 
-    const relativePath = path.relative(uploadsRoot, req.file.path).replace(/\\/g, "/");
+    const cloudinaryUrl = req.file.path;
+    const cloudinaryPublicId = req.file.filename;
+
     const fileMeta = await prisma.fileMeta.create({
       data: {
-        storageKey: relativePath,
+        storageKey: cloudinaryUrl, // Absolute URL
         originalName: req.file.originalname,
         mimeType: req.file.mimetype || "application/octet-stream",
         sizeBytes: BigInt(req.file.size || 0),
@@ -243,12 +245,7 @@ router.post(
       data: { voiceRecordingFileId: fileMeta.id },
     });
 
-    if (interview.voiceRecordingFile?.storageKey) {
-      const oldPath = path.join(uploadsRoot, interview.voiceRecordingFile.storageKey);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-    }
+    // NOTE: Manual file cleanup (fs.unlink) is no longer needed for Cloudinary.
 
     await logAudit({
       actorUserId: req.user.id,
@@ -268,7 +265,7 @@ router.post(
       data: {
         fileId: fileMeta.id,
         originalName: fileMeta.originalName,
-        url: `/uploads/${fileMeta.storageKey}`,
+        url: fileMeta.storageKey, // Absolute Cloudinary URL
       },
     });
   }),

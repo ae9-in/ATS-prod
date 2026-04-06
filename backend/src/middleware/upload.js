@@ -1,39 +1,34 @@
-const fs = require("fs");
-const path = require("path");
 const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
 
-const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
-
-function ensureDir(dirPath) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-}
-
-ensureDir(uploadsRoot);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = req.uploadFolder || "misc";
-    const dir = path.join(uploadsRoot, folder);
-    ensureDir(dir);
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "");
-    const base = path.basename(file.originalname || "file", ext).replace(/[^a-zA-Z0-9-_]/g, "_");
-    cb(null, `${Date.now()}-${base}${ext}`);
+// 1. Cloudinary Storage (Persistent Files: Resumes, Recordings)
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: (req, file) => req.uploadFolder || "ats-misc",
+    resource_type: "auto", 
+    public_id: (req, file) => {
+      const base = (file.originalname || "file").split(".")[0].replace(/[^a-zA-Z0-9-_]/g, "_");
+      return `${Date.now()}-${base}`;
+    }
   },
 });
 
 const upload = multer({
   storage,
-  limits: {
-    fileSize: 20 * 1024 * 1024,
-  },
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
+// 2. Memory Storage (Transient Files: Excel Bulk Uploads)
+// We use memory storage for Excel because XLSX needs to read the buffer 
+// and we avoid local filesystem path issues in Vercel.
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 module.exports = {
   upload,
-  uploadsRoot,
+  memoryUpload,
 };
