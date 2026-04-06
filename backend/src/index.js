@@ -60,7 +60,7 @@ async function bootstrap() {
   try {
     await prisma.$connect();
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      console.log(`[ATS-STABILIZED-V2.0] Server is running on port ${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
