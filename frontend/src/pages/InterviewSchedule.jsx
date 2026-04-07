@@ -418,7 +418,13 @@ const InterviewSchedule = () => {
                 onClick={() => setSelectedId(row.id)}
                 type="button"
               >
-                <img className="w-10 h-10 rounded-full" src={`https://i.pravatar.cc/80?u=${candidate?.id || row.id}`} alt={candidate?.fullName || 'candidate'} />
+                {candidate?.profilePhotoFile?.storageKey ? (
+                  <img className="w-10 h-10 rounded-full object-cover" src={candidate.profilePhotoFile.storageKey} alt={candidate?.fullName || 'candidate'} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    {(candidate?.fullName || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{candidate?.fullName || 'Candidate'}</div>
                   <div className="text-xs text-[#6f7894] truncate">{row.application?.job?.title || 'Interview conversation'}</div>

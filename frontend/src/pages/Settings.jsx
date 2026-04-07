@@ -26,6 +26,8 @@ const Settings = () => {
   const [editingId, setEditingId] = useState('');
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '', role: 'RECRUITER' });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [userPhotoFile, setUserPhotoFile] = useState(null);
+  const [uploadingUserPhoto, setUploadingUserPhoto] = useState(false);
   const [preferences, setPreferences] = useState({
     emailDigests: true,
     pushAlerts: true,
@@ -163,6 +165,37 @@ const Settings = () => {
     }
   };
 
+  const uploadUserPhoto = async () => {
+    if (!userPhotoFile) return;
+    setError('');
+    const token = localStorage.getItem('ats_token');
+    const formData = new FormData();
+    formData.append('file', userPhotoFile);
+
+    try {
+      setUploadingUserPhoto(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/users/me/photo`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) throw new Error(json?.message || 'Photo upload failed');
+      
+      await loadAll();
+      setUserPhotoFile(null);
+      setBanner('Your profile photo has been updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload photo');
+    } finally {
+      setUploadingUserPhoto(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userPhotoFile) uploadUserPhoto();
+  }, [userPhotoFile]);
+
   const integrationRows = useMemo(
     () => [
       ['Slack', 'Connected'],
@@ -216,7 +249,19 @@ const Settings = () => {
               </div>
 
               <div className="grid md:grid-cols-[120px_1fr] gap-5 mt-5">
-                <img className="w-[120px] h-[120px] rounded-2xl object-cover" src={`https://i.pravatar.cc/200?u=${me?.id || 'settings-profile'}`} alt="profile" />
+                <div className="relative group w-[120px] h-[120px]">
+                  {me?.profilePhotoFile?.storageKey ? (
+                    <img className="w-full h-full rounded-2xl object-cover" src={me.profilePhotoFile.storageKey} alt="profile" />
+                  ) : (
+                    <div className="w-full h-full rounded-2xl bg-[#1f52cc] text-white flex items-center justify-center font-bold text-3xl">
+                      {me?.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                  )}
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                    <span className="material-symbols-outlined text-white text-3xl">photo_camera</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => setUserPhotoFile(e.target.files?.[0])} />
+                  </label>
+                </div>
                 <div className="grid md:grid-cols-2 gap-3">
                   <input className="h-11 rounded-lg border border-[#dce4ec] bg-[#f1f5f8] px-3" value={me?.fullName || 'Alex Rivera'} readOnly />
                   <input className="h-11 rounded-lg border border-[#dce4ec] bg-[#f1f5f8] px-3" value={me?.email || 'alex.rivera@ats.ai'} readOnly />
@@ -290,7 +335,13 @@ const Settings = () => {
                 <div key={member.id} className="border border-[#e9edf4] rounded-xl p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <img className="w-10 h-10 rounded-lg" src={`https://i.pravatar.cc/90?u=${member.id}`} alt={member.fullName || 'member'} />
+                      {member.profilePhotoFile?.storageKey ? (
+                        <img className="w-10 h-10 rounded-lg object-cover" src={member.profilePhotoFile.storageKey} alt={member.fullName || 'member'} />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-[#6b7280] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          {(member.fullName || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <div className="font-semibold text-sm truncate">{member.fullName || 'Team Member'}</div>
                         <div className="text-xs text-[#7c88a1] truncate">{member.email || '-'}</div>

@@ -73,7 +73,9 @@ model User {
   feedbackSubmitted InterviewFeedback[]
   pipelineEvents    PipelineEvent[]
   auditLogs         AuditLog[]      @relation("AuditActor")
-  filesUploaded     FileMeta[]
+  filesUploaded     FileMeta[]        @relation("FileUploadedBy")
+  profilePhotoFileId String?          @map("profile_photo_file_id") @db.Uuid
+  profilePhotoFile   FileMeta?         @relation("UserProfilePhoto", fields: [profilePhotoFileId], references: [id])
 
   @@index([email])
   @@map("users")
@@ -113,10 +115,12 @@ model Candidate {
   source               String?            @db.VarChar(80)
   status               CandidateStatus    @default(ACTIVE)
   resumeFileId         String?            @map("resume_file_id") @db.Uuid
+  profilePhotoFileId   String?            @map("profile_photo_file_id") @db.Uuid
   createdById          String             @map("created_by") @db.Uuid
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
   resumeFile           FileMeta?          @relation("CandidateResumeFile", fields: [resumeFileId], references: [id])
+  profilePhotoFile     FileMeta?          @relation("CandidateProfilePhoto", fields: [profilePhotoFileId], references: [id])
   createdBy            User               @relation(fields: [createdById], references: [id])
   skills               CandidateSkill[]
   education            CandidateEducation[]
@@ -263,8 +267,10 @@ model FileMeta {
   sizeBytes              BigInt       @map("size_bytes")
   uploadedById           String?      @map("uploaded_by") @db.Uuid
   createdAt              DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  uploadedBy             User?        @relation(fields: [uploadedById], references: [id])
+  uploadedBy             User?        @relation("FileUploadedBy", fields: [uploadedById], references: [id])
   candidateResumeFor     Candidate[]  @relation("CandidateResumeFile")
+  candidateProfilePhotoFor Candidate[]  @relation("CandidateProfilePhoto")
+  userProfilePhotoFor      User[]       @relation("UserProfilePhoto")
   interviewRecordingFor  Interview[]  @relation("InterviewRecordingFile")
 
   @@map("files")

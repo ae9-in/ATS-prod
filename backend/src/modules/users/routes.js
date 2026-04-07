@@ -25,6 +25,12 @@ router.get(
         role: true,
         status: true,
         createdAt: true,
+        profilePhotoFile: {
+          select: {
+            id: true,
+            storageKey: true,
+          },
+        },
       },
     });
 
@@ -48,6 +54,12 @@ router.get(
         email: true,
         role: true,
         status: true,
+        profilePhotoFile: {
+          select: {
+            id: true,
+            storageKey: true,
+          },
+        },
       },
     });
 
@@ -283,6 +295,55 @@ router.patch(
     });
 
     res.json({ success: true, data: updated });
+  }),
+);
+
+router.post(
+  "/me/photo",
+  (req, res, next) => {
+    req.uploadFolder = "user-photos";
+    next();
+  },
+  upload.single("file"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      throw new ApiError(400, "Photo file is required (field: file)");
+    }
+
+    const cloudinaryUrl = req.file.path;
+
+    const fileMeta = await prisma.fileMeta.create({
+      data: {
+        storageKey: cloudinaryUrl,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype || "image/jpeg",
+        sizeBytes: BigInt(req.file.size || 0),
+        uploadedById: req.user.id,
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { profilePhotoFileId: fileMeta.id },
+    });
+
+    await logAudit({
+      actorUserId: req.user.id,
+      action: "UPLOAD_USER_PHOTO",
+      entityType: "USER",
+      entityId: req.user.id,
+      newData: { fileId: fileMeta.id, url: cloudinaryUrl },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        fileId: fileMeta.id,
+        url: cloudinaryUrl,
+      },
+    });
   }),
 );
 

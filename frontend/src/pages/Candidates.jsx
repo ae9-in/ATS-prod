@@ -197,6 +197,7 @@ const Candidates = () => {
         match: 84 + ((idx * 3) % 15),
         applicationsCount: candidate?._count?.applications || candidate?.applications?.length || 0,
         isShortlisted: Boolean((candidate?.applications || []).some((item) => item.shortlisted)),
+        profilePhotoUrl: candidate.profilePhotoFile?.storageKey || null,
       })),
     [items],
   );
@@ -432,7 +433,13 @@ const Candidates = () => {
             <Reveal key={candidate.id} delay={idx * 0.04}>
               <a href={`/candidate/${candidate.id}`} className="os-card p-5 hover:shadow-lg transition-shadow duration-300 cursor-pointer block">
                 <div className="flex items-start justify-between mb-4">
-                  <img className="w-14 h-14 rounded-xl object-cover" src={`https://i.pravatar.cc/140?u=${candidate.id}`} alt={candidate.name} />
+                  {candidate.profilePhotoUrl ? (
+                    <img className="w-14 h-14 rounded-xl object-cover" src={candidate.profilePhotoUrl} alt={candidate.name} />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xl">
+                      {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                  )}
                   <span className="px-2.5 py-1 bg-[#e8efff] text-[#3558ba] rounded-full text-xs font-semibold">{candidate.match}% Match</span>
                 </div>
                 <div>

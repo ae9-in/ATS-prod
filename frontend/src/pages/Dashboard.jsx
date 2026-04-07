@@ -315,7 +315,13 @@ const Dashboard = () => {
                     viewport={{ once: true, amount: 0.6 }}
                     transition={{ delay: idx * 0.04, duration: 0.3 }}
                   >
-                    <img className="w-10 h-10 rounded-full" src={`https://i.pravatar.cc/80?u=${app.candidate?.id || idx}`} alt="candidate" />
+                    {app.candidate?.profilePhotoFile?.storageKey ? (
+                      <img className="w-10 h-10 rounded-full object-cover" src={app.candidate.profilePhotoFile.storageKey} alt="candidate" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xs">
+                        {(app.candidate?.fullName || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+                      </div>
+                    )}
                     <div>
                       <div className="text-sm leading-snug">
                         {app.candidate?.fullName || 'Candidate'} moved to {app.currentStage?.name || 'Pipeline'}

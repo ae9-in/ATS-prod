@@ -14,7 +14,9 @@ const CandidateProfile = () => {
   const [error, setError] = useState('');
   const [banner, setBanner] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [customDefinitions, setCustomDefinitions] = useState([]);
   const [customValues, setCustomValues] = useState({});
   const [savingCustomFields, setSavingCustomFields] = useState(false);
@@ -98,6 +100,38 @@ const CandidateProfile = () => {
     }
   };
 
+  const uploadPhoto = async () => {
+    if (!id || !photoFile) return;
+    setError('');
+    const token = localStorage.getItem('ats_token');
+    const formData = new FormData();
+    formData.append('file', photoFile);
+
+    try {
+      setUploadingPhoto(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/candidates/${id}/photo`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) throw new Error(json?.message || 'Photo upload failed');
+      
+      const refreshed = await apiGet(`/candidates/${id}`);
+      setCandidate(refreshed.data);
+      setPhotoFile(null);
+      setBanner('Profile photo updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  useEffect(() => {
+    if (photoFile) uploadPhoto();
+  }, [photoFile]);
+
   const saveCustomFields = async () => {
     if (!id) return;
     setError('');
@@ -164,7 +198,28 @@ const CandidateProfile = () => {
               <Reveal>
                 <div className="os-card p-6" id="overview">
                   <div className="flex items-start gap-4">
-                    <img className="w-20 h-20 rounded-2xl object-cover" src={`https://i.pravatar.cc/180?u=${candidate.id}`} alt={candidate.fullName} />
+                    <div className="relative group">
+                      {candidate.profilePhotoFile?.storageKey ? (
+                        <img className="w-20 h-20 rounded-2xl object-cover" src={candidate.profilePhotoFile.storageKey} alt={candidate.fullName} />
+                      ) : (
+                        <div className="w-20 h-20 rounded-2xl bg-[#1f52cc] text-white flex items-center justify-center font-bold text-2xl">
+                          {candidate.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </div>
+                      )}
+                      {canUploadResume ? (
+                        <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                          <span className="material-symbols-outlined text-white">photo_camera</span>
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setPhotoFile(file);
+                              // We use a useEffect or a separate upload button. 
+                              // Let's make it auto-upload for better UX.
+                            }
+                          }} />
+                        </label>
+                      ) : null}
+                    </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div>

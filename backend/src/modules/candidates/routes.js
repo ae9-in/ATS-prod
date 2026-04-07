@@ -85,6 +85,13 @@ const candidateDetailInclude = {
       createdAt: true,
     },
   },
+  profilePhotoFile: {
+    select: {
+      id: true,
+      storageKey: true,
+      originalName: true,
+    },
+  },
   applications: {
     include: {
       currentStage: {
@@ -367,6 +374,64 @@ router.post(
   }),
 );
 
+router.post(
+  "/:id/photo",
+  requireRoles("SUPER_ADMIN", "RECRUITER"),
+  (req, res, next) => {
+    req.uploadFolder = "candidate-photos";
+    next();
+  },
+  upload.single("file"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!req.file) {
+      throw new ApiError(400, "Photo file is required (field: file)");
+    }
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id },
+    });
+    if (!candidate) {
+      throw new ApiError(404, "Candidate not found");
+    }
+
+    const cloudinaryUrl = req.file.path; 
+
+    const fileMeta = await prisma.fileMeta.create({
+      data: {
+        storageKey: cloudinaryUrl,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype || "image/jpeg",
+        sizeBytes: BigInt(req.file.size || 0),
+        uploadedById: req.user.id,
+      },
+    });
+
+    await prisma.candidate.update({
+      where: { id },
+      data: { profilePhotoFileId: fileMeta.id },
+    });
+
+    await logAudit({
+      actorUserId: req.user.id,
+      action: "UPLOAD_CANDIDATE_PHOTO",
+      entityType: "CANDIDATE",
+      entityId: id,
+      newData: { fileId: fileMeta.id, url: cloudinaryUrl },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        fileId: fileMeta.id,
+        url: cloudinaryUrl,
+      },
+    });
+  }),
+);
+
 router.get(
   "/custom-fields/definitions",
   requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
@@ -473,6 +538,12 @@ router.get(
               originalName: true,
               mimeType: true,
               createdAt: true,
+            },
+          },
+          profilePhotoFile: {
+            select: {
+              id: true,
+              storageKey: true,
             },
           },
           applications: {

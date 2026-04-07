@@ -75,7 +75,20 @@ router.post(
         shortlisted,
       },
       include: {
-        candidate: { select: { id: true, fullName: true, email: true, phone: true } },
+        candidate: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            profilePhotoFile: {
+              select: {
+                id: true,
+                storageKey: true,
+              },
+            },
+          },
+        },
         job: { select: { id: true, title: true } },
         currentStage: true,
       },
@@ -127,7 +140,20 @@ router.get(
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          candidate: { select: { id: true, fullName: true, email: true, phone: true } },
+          candidate: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              profilePhotoFile: {
+                select: {
+                  id: true,
+                  storageKey: true,
+                },
+              },
+            },
+          },
           job: { select: { id: true, title: true } },
           currentStage: true,
         },

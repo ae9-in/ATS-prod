@@ -50,6 +50,12 @@ router.post(
         fullName: true,
         email: true,
         role: true,
+        profilePhotoFile: {
+          select: {
+            id: true,
+            storageKey: true,
+          },
+        },
       },
     });
 
@@ -72,6 +78,14 @@ router.post(
 
     const user = await prisma.user.findFirst({
       where: { email: { equals: email, mode: "insensitive" } },
+      include: {
+        profilePhotoFile: {
+          select: {
+            id: true,
+            storageKey: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -101,6 +115,7 @@ router.post(
           fullName: user.fullName,
           email: user.email,
           role: user.role,
+          profilePhotoUrl: user.profilePhotoFile?.storageKey || null,
         },
       },
     });

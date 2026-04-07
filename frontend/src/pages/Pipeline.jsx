@@ -410,7 +410,13 @@ const Pipeline = () => {
                       {column.items.map((app) => (
                         <div key={app.id} className="os-card p-3">
                           <div className="flex items-center gap-2">
-                            <img className="w-9 h-9 rounded-lg" src={`https://i.pravatar.cc/80?u=${app.candidate?.id || app.id}`} alt={app.candidate?.fullName || 'candidate'} />
+                            {app.candidate?.profilePhotoFile?.storageKey ? (
+                              <img className="w-9 h-9 rounded-lg object-cover" src={app.candidate.profilePhotoFile.storageKey} alt={app.candidate?.fullName} />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                {(app.candidate?.fullName || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+                              </div>
+                            )}
                             <div className="min-w-0">
                               <button className="text-sm font-semibold text-left w-full truncate leading-5" type="button" onClick={() => navigate(`/candidate/${app.candidate?.id || ''}`)}>
                                 {app.candidate?.fullName || 'Candidate'}

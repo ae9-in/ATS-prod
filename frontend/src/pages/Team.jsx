@@ -73,7 +73,13 @@ const Team = () => {
           {members.map((member, i) => (
             <Reveal key={member.id || member.email || i} delay={i * 0.05}>
               <div className="os-card p-5 text-center">
-                <img className="w-20 h-20 rounded-2xl object-cover mx-auto" src={`https://i.pravatar.cc/140?u=${member.id || member.fullName}`} alt={member.fullName} />
+                {member.profilePhotoFile?.storageKey ? (
+                  <img className="w-20 h-20 rounded-2xl object-cover mx-auto" src={member.profilePhotoFile.storageKey} alt={member.fullName} />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-[#1f52cc] text-white flex items-center justify-center font-bold text-2xl mx-auto">
+                    {(member.fullName || 'T').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                )}
                 <h3 className="text-xl font-semibold font-[Manrope] mt-4">{member.fullName}</h3>
                 <p className="text-xs uppercase tracking-[.1em] text-[#8391ab] mt-1">{String(member.role || 'USER').replace('_', ' ')}</p>
                 <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#6f7d98]"><span className={`h-2 w-2 rounded-full ${member.status === 'ACTIVE' ? 'bg-[#2fb56f]' : 'bg-[#a6b1c8]'}`} />{member.status || 'ACTIVE'}</div>
