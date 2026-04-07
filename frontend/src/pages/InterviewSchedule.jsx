@@ -563,7 +563,14 @@ const InterviewSchedule = () => {
                   ))}
                 </select>
                 <div className="grid grid-cols-2 gap-2">
-                  <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" value={scheduleForm.roundNo} onChange={(event) => setScheduleForm((prev) => ({ ...prev, roundNo: event.target.value }))} />
+                  <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.roundNo} onChange={(event) => setScheduleForm((prev) => ({ ...prev, roundNo: event.target.value }))}>
+                    <option value="1">Screening Round (1)</option>
+                    <option value="2">Technical Round (2)</option>
+                    <option value="3">System Design (3)</option>
+                    <option value="4">Managerial Round (4)</option>
+                    <option value="5">Culture Fit (5)</option>
+                    <option value="6">Final HR Round (6)</option>
+                  </select>
                   <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.mode} onChange={(event) => setScheduleForm((prev) => ({ ...prev, mode: event.target.value }))}>
                     <option value="ONLINE">ONLINE</option>
                     <option value="OFFLINE">OFFLINE</option>
@@ -582,20 +589,29 @@ const InterviewSchedule = () => {
 
           <form className="os-card p-4 mt-3" onSubmit={onFeedbackSubmit}>
             <div className="text-sm font-semibold text-[#142651] mb-3">Submit Feedback</div>
-            <div className="grid grid-cols-3 gap-2">
-              <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.technicalRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, technicalRating: event.target.value }))} />
-              <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.communicationRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, communicationRating: event.target.value }))} />
-              <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.cultureFitRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, cultureFitRating: event.target.value }))} />
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-1">
+                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Technical Skills (1-5)</label>
+                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.technicalRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, technicalRating: event.target.value }))} />
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Communication (1-5)</label>
+                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.communicationRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, communicationRating: event.target.value }))} />
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Culture Fit (1-5)</label>
+                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.cultureFitRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, cultureFitRating: event.target.value }))} />
+              </div>
             </div>
-            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Strengths" value={feedbackForm.strengths} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, strengths: event.target.value }))} required />
-            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Concerns" value={feedbackForm.concerns} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, concerns: event.target.value }))} required />
+            <textarea className="mt-3 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Key Strengths..." value={feedbackForm.strengths} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, strengths: event.target.value }))} required />
+            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Potential Concerns..." value={feedbackForm.concerns} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, concerns: event.target.value }))} required />
             <select className="mt-2 h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={feedbackForm.recommendation} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, recommendation: event.target.value }))}>
               <option value="PASS">PASS</option>
               <option value="FAIL">FAIL</option>
               <option value="HOLD">HOLD</option>
               <option value="PENDING">PENDING</option>
             </select>
-            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Overall comments" value={feedbackForm.overallComments} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, overallComments: event.target.value }))} required />
+            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Overall Decision Comments..." value={feedbackForm.overallComments} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, overallComments: event.target.value }))} required />
             <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingFeedback || !selectedInterview || Boolean(selectedFeedback)}>
               {selectedFeedback ? 'Feedback Already Submitted' : savingFeedback ? 'Submitting...' : 'Submit Feedback'}
             </button>
