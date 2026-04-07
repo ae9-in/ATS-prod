@@ -12,6 +12,8 @@ const router = express.Router();
 
 router.use(auth);
 
+const isUUID = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 function normalizeFieldKey(input) {
   return String(input || "")
     .trim()
@@ -315,6 +317,8 @@ router.post(
   upload.single("file"),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+    
     if (!req.file) {
       throw new ApiError(400, "Resume file is required (field: file)");
     }
@@ -386,6 +390,8 @@ router.post(
   upload.single("file"),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+    
     if (!req.file) {
       throw new ApiError(400, "Photo file is required (field: file)");
     }
@@ -596,6 +602,7 @@ router.get(
   requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
 
     const candidate = await prisma.candidate.findUnique({
       where: { id },
@@ -704,6 +711,8 @@ router.patch(
   requireRoles("SUPER_ADMIN", "RECRUITER"),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+    
     const { customFields = {} } = req.body || {};
 
     const candidate = await prisma.candidate.findUnique({
@@ -740,6 +749,8 @@ router.patch(
   requireRoles("SUPER_ADMIN", "RECRUITER"),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+    
     const data = req.body || {};
 
     const existing = await prisma.candidate.findUnique({ where: { id } });
@@ -824,8 +835,11 @@ router.get(
   "/:id",
   requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
   asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+    
     const candidate = await prisma.candidate.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: candidateDetailInclude,
     });
 
