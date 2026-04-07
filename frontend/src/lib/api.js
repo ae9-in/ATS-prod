@@ -42,6 +42,26 @@ export function apiGet(path) {
   return request(path, { method: 'GET' });
 }
 
+export async function apiGetBlob(path) {
+  const token = localStorage.getItem('ats_token');
+  const headers = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || `Export failed (${response.status})`);
+  }
+
+  return response.blob();
+}
+
 export function apiPost(path, body) {
   return request(path, { method: 'POST', body: JSON.stringify(body) });
 }

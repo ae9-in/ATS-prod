@@ -4,7 +4,7 @@ import EnterpriseLayout, { EnterpriseSidebar, EnterpriseTopbar } from '../compon
 import { PageEnter, Reveal } from '../components/PageMotion';
 import UserChip from '../components/UserChip';
 import NotificationBell from '../components/NotificationBell';
-import { apiGet, apiPost, getStoredUser } from '../lib/api';
+import { apiGet, apiGetBlob, apiPost, getStoredUser } from '../lib/api';
 import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
 
 const emptyScheduleForm = {
@@ -116,18 +116,17 @@ const InterviewSchedule = () => {
       const day = String(start.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
 
-      const token = localStorage.getItem('ats_token');
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&date=${encodeURIComponent(dateStr)}&token=${token}`;
+      const path = `/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&date=${encodeURIComponent(dateStr)}`;
       
-      // Strong Fix: Use a native browser download link
+      const blob = await apiGetBlob(path);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = downloadUrl;
-      // Removed target=_blank to prevent popup blockers; modern browsers handle file downloads in-place
+      a.href = url;
       a.download = `interviews-${dateStr}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       
       setBanner(`Interviews for ${dateStr} export started.`);
     } catch (err) {
