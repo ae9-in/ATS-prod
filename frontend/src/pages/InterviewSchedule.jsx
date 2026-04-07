@@ -109,7 +109,12 @@ const InterviewSchedule = () => {
       
       const startISO = start.toISOString();
       const endISO = end.toISOString();
-      const dateStr = start.toLocaleDateString();
+      
+      // Standardize date for filename (YYYY-MM-DD)
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, '0');
+      const day = String(start.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
 
       const token = localStorage.getItem('ats_token');
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
@@ -118,7 +123,7 @@ const InterviewSchedule = () => {
       // Strong Fix: Use a native browser download link
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.target = '_blank';
+      // Removed target=_blank to prevent popup blockers; modern browsers handle file downloads in-place
       a.download = `interviews-${dateStr}.pdf`;
       document.body.appendChild(a);
       a.click();
