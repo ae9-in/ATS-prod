@@ -192,7 +192,11 @@ router.get(
           },
         },
         interviewers: { select: { id: true, fullName: true, email: true } },
-        feedback: true,
+        feedbacks: {
+          include: {
+            submittedBy: { select: { id: true, fullName: true } }
+          }
+        },
         voiceRecordingFile: {
           select: {
             id: true,
@@ -323,12 +327,12 @@ router.post(
       throw new ApiError(403, "You can only submit feedback for interviews assigned to you");
     }
 
-    const existingFeedback = await prisma.interviewFeedback.findUnique({
-      where: { interviewId: id },
+    const existingFeedback = await prisma.interviewFeedback.findFirst({
+      where: { interviewId: id, submittedById: req.user.id },
       select: { id: true },
     });
     if (existingFeedback) {
-      throw new ApiError(409, "Feedback already submitted for this interview");
+      throw new ApiError(409, "You have already submitted feedback for this interview");
     }
 
     const feedback = await prisma.interviewFeedback.create({

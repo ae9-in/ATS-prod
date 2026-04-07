@@ -41,6 +41,8 @@ const InterviewSchedule = () => {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingFeedback, setSavingFeedback] = useState(false);
+  const [candidateHistory, setCandidateHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [uploadingRecording, setUploadingRecording] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
@@ -163,7 +165,29 @@ const InterviewSchedule = () => {
   );
 
   const selectedCandidate = selectedInterview?.application?.candidate;
-  const selectedFeedback = selectedInterview?.feedback;
+  const selectedFeedbacks = selectedInterview?.feedbacks || [];
+  const myFeedback = selectedFeedbacks.find(f => f.submittedById === currentUser?.id);
+
+  const loadCandidateHistory = async (candidateId) => {
+    if (!candidateId) return;
+    try {
+      setLoadingHistory(true);
+      const res = await apiGet(`/candidates/${candidateId}/history`);
+      setCandidateHistory(res.data?.timeline || []);
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCandidate?.id) {
+      loadCandidateHistory(selectedCandidate.id);
+    } else {
+      setCandidateHistory([]);
+    }
+  }, [selectedCandidate?.id]);
 
   const openMeetingLink = () => {
     const link = selectedInterview?.meetingLink;
@@ -544,16 +568,93 @@ const InterviewSchedule = () => {
               ) : null}
             </div>
 
-            {selectedFeedback ? (
-              <div className="os-card p-4 text-sm text-[#2a344f]">
-                <div className="font-semibold text-[#142651] mb-2">Submitted Feedback</div>
-                <div>Recommendation: {selectedFeedback.recommendation}</div>
-                <div>Technical: {selectedFeedback.technicalRating}/5</div>
-                <div>Communication: {selectedFeedback.communicationRating}/5</div>
-                <div>Culture Fit: {selectedFeedback.cultureFitRating}/5</div>
-                <div className="mt-2 text-[#5e6a85]">{selectedFeedback.overallComments}</div>
+            {/* Candidate Journey Timeline */}
+            <div className="os-card p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="font-semibold text-[#142651]">Round History</div>
+                {loadingHistory && <div className="text-[10px] text-blue-500 animate-pulse">Syncing...</div>}
               </div>
-            ) : null}
+              <div className="space-y-4 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#e4ebf1]">
+                {candidateHistory.length === 0 && !loadingHistory && (
+                  <div className="text-xs text-[#a1acbd] pl-8">No journey records found.</div>
+                )}
+                {candidateHistory.map((event, idx) => (
+                  <div key={idx} className="relative pl-10">
+                    <div className={`absolute left-0 top-1 w-9 h-9 rounded-full border-4 border-white flex items-center justify-center ${
+                      event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'bg-[#2ca764] text-white' : 
+                      event.type === 'INTERVIEW_SCHEDULED' ? 'bg-[#1f52cc] text-white' : 'bg-[#a1acbd] text-white'
+                    }`}>
+                      <span className="material-symbols-outlined text-sm">
+                        {event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'check_circle' : 
+                         event.type === 'INTERVIEW_SCHEDULED' ? 'event' : 'info'}
+                      </span>
+                    </div>
+                    <div className="text-sm font-semibold text-[#142651]">
+                      {event.type === 'INTERVIEW_SCHEDULED' ? `Round ${event.roundNo} Scheduled` : 
+                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `Feedback: ${event.recommendation}` : 
+                       event.type.replace(/_/g, ' ')}
+                    </div>
+                    <div className="text-[11px] text-[#6f7894] mb-1">
+                      {new Date(event.at).toLocaleString()}
+                    </div>
+                    {event.overallComments && (
+                      <div className="text-xs text-[#5e6a85] bg-[#f8fbff] p-2 rounded-lg border border-[#eef3ff]">
+                        "{event.overallComments}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Multiple Feedback Display */}
+            {selectedFeedbacks.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-xs font-bold uppercase text-[#8b95ad] tracking-wider ml-1">Interviewer Assessments ({selectedFeedbacks.length})</div>
+                {selectedFeedbacks.map((f) => (
+                  <div key={f.id} className="os-card p-4 transition-all hover:shadow-md border-l-4 border-[#2ca764]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#eef3ff] flex items-center justify-center text-[10px] font-bold text-[#1f52cc]">
+                          {(f.submittedBy?.fullName || 'U').split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <div className="text-sm font-medium text-[#142651]">{f.submittedBy?.fullName}</div>
+                      </div>
+                      <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        f.recommendation === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' : 
+                        f.recommendation === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
+                      }`}>
+                        {f.recommendation}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                        <div className="text-[10px] text-[#868fa0] uppercase">Tech</div>
+                        <div className="text-xs font-bold">{f.technicalRating}/5</div>
+                      </div>
+                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                        <div className="text-[10px] text-[#868fa0] uppercase">Comm</div>
+                        <div className="text-xs font-bold">{f.communicationRating}/5</div>
+                      </div>
+                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                        <div className="text-[10px] text-[#868fa0] uppercase">Culture</div>
+                        <div className="text-xs font-bold">{f.cultureFitRating}/5</div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs">
+                        <span className="font-semibold text-[#142651]">Strengths:</span>
+                        <span className="text-[#5e6a85] ml-1">{f.strengths}</span>
+                      </div>
+                      <div className="text-xs">
+                        <span className="font-semibold text-[#142651]">Comments:</span>
+                        <p className="text-[#5e6a85] mt-1 italic text-[13px]">"{f.overallComments}"</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Reveal>
 
@@ -640,8 +741,8 @@ const InterviewSchedule = () => {
               <option value="PENDING">PENDING</option>
             </select>
             <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Overall Decision Comments..." value={feedbackForm.overallComments} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, overallComments: event.target.value }))} required />
-            <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingFeedback || !selectedInterview || Boolean(selectedFeedback)}>
-              {selectedFeedback ? 'Feedback Already Submitted' : savingFeedback ? 'Submitting...' : 'Submit Feedback'}
+            <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingFeedback || !selectedInterview || Boolean(myFeedback)}>
+              {myFeedback ? 'You have submitted feedback' : savingFeedback ? 'Submitting...' : 'Submit Feedback'}
             </button>
           </form>
 

@@ -235,14 +235,14 @@ model Interview {
   interviewers               User[]            @relation("InterviewInterviewer")
   createdBy                  User              @relation("InterviewCreatedBy", fields: [createdById], references: [id])
   voiceRecordingFile         FileMeta?         @relation("InterviewRecordingFile", fields: [voiceRecordingFileId], references: [id])
-  feedback                   InterviewFeedback?
+  feedbacks                  InterviewFeedback[]
 
   @@map("interviews")
 }
 
 model InterviewFeedback {
   id                 String          @id @default(uuid()) @db.Uuid
-  interviewId        String          @unique @map("interview_id") @db.Uuid
+  interviewId        String          @map("interview_id") @db.Uuid
   technicalRating    Int             @map("technical_rating")
   communicationRating Int            @map("communication_rating")
   cultureFitRating   Int             @map("culture_fit_rating")
@@ -255,6 +255,7 @@ model InterviewFeedback {
   interview          Interview       @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   submittedBy        User            @relation(fields: [submittedById], references: [id])
 
+  @@unique([interviewId, submittedById])
   @@map("interview_feedback")
 }
 
