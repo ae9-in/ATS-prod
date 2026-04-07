@@ -113,6 +113,7 @@ model Candidate {
   expectedCtc          Decimal?           @map("expected_ctc") @db.Decimal(12, 2)
   noticePeriodDays     Int?               @map("notice_period_days")
   source               String?            @db.VarChar(80)
+  category             String?            @default("Company") @db.VarChar(50)
   status               CandidateStatus    @default(ACTIVE)
   resumeFileId         String?            @map("resume_file_id") @db.Uuid
   profilePhotoFileId   String?            @map("profile_photo_file_id") @db.Uuid

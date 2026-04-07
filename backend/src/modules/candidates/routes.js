@@ -218,6 +218,7 @@ router.post(
       totalExperienceYears,
       currentCompany,
       source,
+      category,
       skills = [],
       education = [],
       customFields = {},
@@ -261,6 +262,7 @@ router.post(
         totalExperienceYears,
         currentCompany,
         source,
+        category: category || "Company",
         createdById: req.user.id,
         skills: {
           create: skills.map((item) => ({
@@ -511,9 +513,13 @@ router.get(
     const page = Number.parseInt(req.query.page, 10) || 1;
     const limit = Number.parseInt(req.query.limit, 10) || 10;
     const search = req.query.search?.trim();
+    const category = req.query.category?.trim();
     const skip = (page - 1) * limit;
 
     const where = {};
+    if (category && category !== 'All') {
+      where.category = category;
+    }
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: "insensitive" } },
@@ -786,6 +792,7 @@ router.patch(
         totalExperienceYears: data.totalExperienceYears,
         currentCompany: data.currentCompany,
         source: data.source,
+        category: data.category
       },
     });
 
@@ -809,6 +816,23 @@ router.patch(
     });
 
     res.json({ success: true, data: updated });
+  }),
+);
+
+router.get(
+  "/categories",
+  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
+  asyncHandler(async (req, res) => {
+    const categories = await prisma.candidate.findMany({
+      select: { category: true },
+      distinct: ["category"],
+    });
+    const list = categories.map(c => c.category).filter(Boolean);
+    // Ensure defaults are always present in the list for suggestions
+    if (!list.includes("Company")) list.push("Company");
+    if (!list.includes("College Drive")) list.push("College Drive");
+    
+    res.json({ success: true, data: [...new Set(list)] });
   }),
 );
 

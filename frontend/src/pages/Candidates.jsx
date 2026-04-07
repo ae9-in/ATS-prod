@@ -13,6 +13,7 @@ const initialForm = {
   currentCompany: '',
   totalExperienceYears: '',
   source: '',
+  category: 'Company',
   primarySkill: '',
   customFields: {},
 };
@@ -34,6 +35,8 @@ const Candidates = () => {
   const [saving, setSaving] = useState(false);
   const [savingCustomField, setSavingCustomField] = useState(false);
   const [shortlistFilter, setShortlistFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [categoriesList, setCategoriesList] = useState(['Company', 'College Drive']);
   const [form, setForm] = useState(initialForm);
   const [bulkFile, setBulkFile] = useState(null);
   const [customDefinitions, setCustomDefinitions] = useState([]);
@@ -45,10 +48,22 @@ const Candidates = () => {
   const currentUser = getStoredUser();
   const canManageCandidates = ['SUPER_ADMIN', 'RECRUITER'].includes(currentUser?.role);
 
-  const loadCandidates = async (query = '') => {
+  const loadCandidates = async (query = '', cat = categoryFilter) => {
     const searchParam = query.trim() ? `&search=${encodeURIComponent(query.trim())}` : '';
-    const res = await apiGet(`/candidates?limit=30${searchParam}`);
+    const catParam = cat && cat !== 'All' ? `&category=${encodeURIComponent(cat)}` : '';
+    const res = await apiGet(`/candidates?limit=30${searchParam}${catParam}`);
     setItems(res.data || []);
+  };
+
+  const loadCategories = async () => {
+    try {
+      const res = await apiGet('/candidates/categories');
+      if (res.success && res.data) {
+        setCategoriesList(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load categories', err);
+    }
   };
 
   const loadCustomDefinitions = async () => {
@@ -63,7 +78,11 @@ const Candidates = () => {
       try {
         setLoading(true);
         setError('');
-        await Promise.all([loadCandidates(''), loadCustomDefinitions()]);
+        await Promise.all([
+          loadCandidates(search, categoryFilter), 
+          loadCustomDefinitions(),
+          loadCategories()
+        ]);
       } catch (err) {
         if (!mounted) return;
         setError(err.message || 'Failed to load candidates');
@@ -110,6 +129,7 @@ const Candidates = () => {
         totalExperienceYears: form.totalExperienceYears ? Number(form.totalExperienceYears) : null,
         currentCompany: form.currentCompany.trim() || null,
         source: form.source.trim() || null,
+        category: form.category,
         skills,
         education: [],
         customFields: form.customFields,
@@ -198,6 +218,7 @@ const Candidates = () => {
         applicationsCount: candidate?._count?.applications || candidate?.applications?.length || 0,
         isShortlisted: Boolean((candidate?.applications || []).some((item) => item.shortlisted)),
         profilePhotoUrl: candidate.profilePhotoFile?.storageKey || null,
+        category: candidate.category || 'Company',
       })),
     [items],
   );
@@ -275,7 +296,42 @@ const Candidates = () => {
         </form>
 
         <div className="os-card mt-4 p-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-[#5e6b87]">Shortlist:</span>
+          <span className="text-[#5e6b87]">Category:</span>
+          {categoriesList.map(cat => (
+            <button
+              key={cat}
+              className={`os-btn-outline !h-9 ${categoryFilter === cat ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
+              type="button"
+              onClick={async () => {
+                setCategoryFilter(cat);
+                setLoading(true);
+                try {
+                  await loadCandidates(search, cat);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+          <button
+            className={`os-btn-outline !h-9 ${categoryFilter === 'All' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
+            type="button"
+            onClick={async () => {
+              setCategoryFilter('All');
+              setLoading(true);
+              try {
+                await loadCandidates(search, 'All');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            All
+          </button>
+
+          <span className="ml-4 text-[#5e6b87]">Shortlist:</span>
           <button
             className={`os-btn-outline !h-9 ${shortlistFilter === 'all' ? '!border-[#1f52cc] !text-[#1f52cc]' : ''}`}
             type="button"
@@ -387,8 +443,30 @@ const Candidates = () => {
                 <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" type="number" min="0" step="0.1" value={form.totalExperienceYears} onChange={(event) => setForm((prev) => ({ ...prev, totalExperienceYears: event.target.value }))} />
               </div>
               <div>
-                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Source</label>
-                <input className="mt-1 h-10 w-full rounded-lg border border-[#dbe4ee] px-3 text-sm" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
+                <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Candidate Category</label>
+                <div className="flex gap-1 mt-1">
+                  <select 
+                    className="h-10 flex-1 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+                    value={categoriesList.includes(form.category) ? form.category : 'Custom'}
+                    onChange={(e) => {
+                      if (e.target.value !== 'Custom') {
+                        setForm(prev => ({ ...prev, category: e.target.value }));
+                      }
+                    }}
+                  >
+                    {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    <option value="Custom">+ Add New Category</option>
+                  </select>
+                  {(!categoriesList.includes(form.category) || form.category === 'Custom') && (
+                    <input 
+                      className="h-10 flex-1 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+                      placeholder="Enter category name"
+                      value={form.category === 'Custom' ? '' : form.category}
+                      onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
+                      autoFocus
+                    />
+                  )}
+                </div>
               </div>
               <div className="md:col-span-2 xl:col-span-1">
                 <label className="text-[11px] uppercase tracking-[.12em] text-[#7b86a0]">Primary Skill</label>
@@ -447,12 +525,13 @@ const Candidates = () => {
                   <p className="text-sm text-[#6f7d98] mt-1">{candidate.role}</p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#e9eef4] flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-[.1em] text-[#74829e]">{candidate.status}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[11px] uppercase tracking-[.1em] ${candidate.isShortlisted ? 'text-[#1e8a54]' : 'text-[#657290]'}`}>
-                      {candidate.isShortlisted ? 'Shortlisted' : 'Open'}
-                    </span>
-                    <span className="text-xs text-[#657290]">{candidate.applicationsCount} apps</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-[0.05em] text-[#a4acc1] leading-none">Status</span>
+                    <span className="text-xs uppercase tracking-[.1em] text-[#74829e] mt-1">{candidate.status}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-[0.05em] text-[#a4acc1] leading-none">Category</span>
+                    <span className="text-xs uppercase tracking-[.1em] text-[#1f52cc] mt-1 font-semibold">{candidate.category}</span>
                   </div>
                 </div>
               </a>
