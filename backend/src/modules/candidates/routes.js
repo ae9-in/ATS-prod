@@ -621,7 +621,7 @@ router.get(
         interviews: {
           include: {
             interviewers: { select: { id: true, fullName: true, role: true } },
-            feedback: {
+            feedbacks: {
               select: {
                 recommendation: true,
                 submittedAt: true,
@@ -672,16 +672,16 @@ router.get(
           result: interview.result,
         });
 
-        if (interview.feedback) {
+        interview.feedbacks?.forEach((fb) => {
           timeline.push({
             type: "INTERVIEW_FEEDBACK_SUBMITTED",
-            at: interview.feedback.submittedAt,
+            at: fb.submittedAt,
             applicationId: application.id,
             interviewId: interview.id,
-            recommendation: interview.feedback.recommendation,
-            submittedBy: interview.feedback.submittedBy,
+            recommendation: fb.recommendation,
+            submittedBy: fb.submittedBy,
           });
-        }
+        });
       });
     });
 
@@ -698,22 +698,6 @@ router.get(
   }),
 );
 
-router.get(
-  "/:id",
-  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
-  asyncHandler(async (req, res) => {
-    const candidate = await prisma.candidate.findUnique({
-      where: { id: req.params.id },
-      include: candidateDetailInclude,
-    });
-
-    if (!candidate) {
-      throw new ApiError(404, "Candidate not found");
-    }
-
-    res.json({ success: true, data: candidate });
-  }),
-);
 
 router.patch(
   "/:id/custom-fields",
@@ -833,6 +817,23 @@ router.get(
     if (!list.includes("College Drive")) list.push("College Drive");
     
     res.json({ success: true, data: [...new Set(list)] });
+  }),
+);
+
+router.get(
+  "/:id",
+  requireRoles("SUPER_ADMIN", "RECRUITER", "INTERVIEWER"),
+  asyncHandler(async (req, res) => {
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: req.params.id },
+      include: candidateDetailInclude,
+    });
+
+    if (!candidate) {
+      throw new ApiError(404, "Candidate not found");
+    }
+
+    res.json({ success: true, data: candidate });
   }),
 );
 
