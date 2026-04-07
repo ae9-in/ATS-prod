@@ -368,9 +368,13 @@
 }
 
 .os-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(15, 27, 61, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(15, 27, 61, 0.1);
   border-color: #d8e2ed;
+}
+
+.os-card {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .os-btn-primary {
@@ -392,7 +396,7 @@
   vertical-align: middle;
   gap: 6px;
   letter-spacing: 0.01em;
-  transition: background-color 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .os-btn-primary:hover {
@@ -426,8 +430,8 @@
 .os-btn-outline:hover {
   border-color: #cfd9e8;
   color: #2d3b61;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(15, 27, 61, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(15, 27, 61, 0.08);
 }
 
 .os-btn-primary:active,

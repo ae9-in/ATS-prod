@@ -102,13 +102,18 @@ const InterviewSchedule = () => {
  
   const downloadDailyPdf = async () => {
     try {
-      const year = viewDate.getFullYear();
-      const month = String(viewDate.getMonth() + 1).padStart(2, '0');
-      const day = String(viewDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      const start = new Date(viewDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(viewDate);
+      end.setHours(23, 59, 59, 999);
+      
+      const startISO = start.toISOString();
+      const endISO = end.toISOString();
+      const dateStr = start.toLocaleDateString();
+
       const token = localStorage.getItem('ats_token');
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&date=${dateStr}&token=${token}`;
+      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&token=${token}`;
       
       // Strong Fix: Use a native browser download link
       const a = document.createElement('a');
