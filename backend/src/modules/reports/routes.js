@@ -400,7 +400,7 @@ router.get(
               job: { select: { title: true } },
             },
           },
-          interviewer: { select: { fullName: true } },
+          interviewers: { select: { fullName: true } },
         },
         orderBy: { scheduledStart: "asc" },
       });
@@ -412,7 +412,8 @@ router.get(
       doc.pipe(res);
 
       doc.fontSize(22).fillColor("#071f52").text("Daily Interview Schedule", { align: "center" });
-      doc.fontSize(12).fillColor("#6b7895").text(`Date: ${date}`, { align: "center" });
+      const dateLabel = date || start.toLocaleDateString();
+      doc.fontSize(12).fillColor("#6b7895").text(`Date: ${dateLabel}`, { align: "center" });
       doc.moveDown(2.5);
 
       if (interviews.length === 0) {
@@ -421,8 +422,11 @@ router.get(
         interviews.forEach((item) => {
           const timeStr = new Date(item.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           doc.fontSize(13).fillColor("#071f52").text(`${timeStr} - ${item.application?.candidate?.fullName || "N/A"}`, { underline: true });
-          doc.fontSize(10).fillColor("#333").text(`Round: ${item.roundNo} | Role: ${item.application?.job?.title || "General"}`);
-          doc.text(`Interviewer: ${item.interviewer?.fullName || "N/A"} | Mode: ${item.mode}`);
+          const roundLabel = item.round || `Round ${item.roundNo}`;
+          doc.fontSize(10).fillColor("#333").text(`Round: ${roundLabel} | Role: ${item.application?.job?.title || "General"}`);
+          
+          const interviewerNames = item.interviewers?.map((u) => u.fullName).join(", ") || "N/A";
+          doc.text(`Interviewers: ${interviewerNames} | Mode: ${item.mode}`);
           doc.fillColor("#666").text(`Contact: ${item.application?.candidate?.email || item.application?.candidate?.phone || "N/A"}`);
           doc.moveDown(1.5);
         });

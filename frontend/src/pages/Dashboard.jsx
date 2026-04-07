@@ -131,10 +131,10 @@ const Dashboard = () => {
 
     const selected = applications.filter((a) => a.status === 'SELECTED').length;
     const joined = applications.filter((a) => a.status === 'JOINED').length;
-    const activeRecruiters = interviews.filter((item) => item?.interviewer?.id).length;
+    const activeRecruiters = interviews.filter((item) => item?.interviewers?.length > 0).length;
 
     if (currentUser?.role === 'INTERVIEWER') {
-      const myInterviews = interviews.filter((item) => item.interviewerId === currentUser.id);
+      const myInterviews = interviews.filter((item) => item.interviewers?.some(u => u.id === currentUser.id));
       const pendingFeedback = myInterviews.filter((item) => !item.mandatoryFeedbackSubmitted).length;
       return [
         { label: 'My Interviews', value: myInterviews.length, tag: 'Assigned', href: '/schedule' },

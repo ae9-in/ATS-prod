@@ -10,7 +10,8 @@ import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseN
 const emptyScheduleForm = {
   applicationId: '',
   roundNo: 1,
-  interviewerId: '',
+  round: 'Round 1',
+  interviewerIds: [],
   scheduledStart: '',
   scheduledEnd: '',
   mode: 'ONLINE',
@@ -189,10 +190,16 @@ const InterviewSchedule = () => {
 
     try {
       setSavingSchedule(true);
+      
+      // Determine round number from label
+      const roundMap = { 'Round 1': 1, 'Round 2': 2, 'Formal HR Round': 3 };
+      const roundNo = roundMap[scheduleForm.round] || 1;
+
       await apiPost('/interviews', {
         applicationId: scheduleForm.applicationId,
-        roundNo: Number(scheduleForm.roundNo),
-        interviewerId: scheduleForm.interviewerId,
+        roundNo,
+        round: scheduleForm.round,
+        interviewerIds: scheduleForm.interviewerIds,
         scheduledStart: new Date(scheduleForm.scheduledStart).toISOString(),
         scheduledEnd: scheduleForm.scheduledEnd ? new Date(scheduleForm.scheduledEnd).toISOString() : null,
         mode: scheduleForm.mode,
@@ -518,7 +525,7 @@ const InterviewSchedule = () => {
             <div className="os-card p-4 text-sm text-[#2a344f]">
               <div className="font-semibold text-[#142651] mb-2">Current Interview Details</div>
               <div>Role: {selectedInterview?.application?.job?.title || '-'}</div>
-              <div>Interviewer: {selectedInterview?.interviewer?.fullName || '-'}</div>
+              <div>Interviewers: {selectedInterview?.interviewers?.map(u => u.fullName).join(', ') || '-'}</div>
               <div>Mode: {selectedInterview?.mode || '-'}</div>
               <div>Status: {selectedInterview?.result || '-'}</div>
               <div>Date: {selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
@@ -565,20 +572,32 @@ const InterviewSchedule = () => {
                     </option>
                   ))}
                 </select>
-                <select className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.interviewerId} onChange={(event) => setScheduleForm((prev) => ({ ...prev, interviewerId: event.target.value }))} required>
-                  <option value="">Select interviewer</option>
+                <div className="text-xs font-semibold text-[#6d7893] mt-1">Select Interviewers (Multiple)</div>
+                <div className="max-h-32 overflow-y-auto border border-[#dbe4ee] rounded-lg p-2 space-y-1 bg-white">
                   {interviewers.map((person) => (
-                    <option key={person.id} value={person.id}>{person.fullName}</option>
+                    <label key={person.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={scheduleForm.interviewerIds.includes(person.id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setScheduleForm(prev => {
+                            const newIds = checked 
+                              ? [...prev.interviewerIds, person.id]
+                              : prev.interviewerIds.filter(id => id !== person.id);
+                            return { ...prev, interviewerIds: newIds };
+                          });
+                        }}
+                      />
+                      <span className="text-xs text-[#2a344f]">{person.fullName}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.roundNo} onChange={(event) => setScheduleForm((prev) => ({ ...prev, roundNo: event.target.value }))}>
-                    <option value="1">Screening Round (1)</option>
-                    <option value="2">Technical Round (2)</option>
-                    <option value="3">System Design (3)</option>
-                    <option value="4">Managerial Round (4)</option>
-                    <option value="5">Culture Fit (5)</option>
-                    <option value="6">Final HR Round (6)</option>
+                  <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.round} onChange={(event) => setScheduleForm((prev) => ({ ...prev, round: event.target.value }))}>
+                    <option value="Round 1">Round 1</option>
+                    <option value="Round 2">Round 2</option>
+                    <option value="Formal HR Round">Formal HR Round</option>
                   </select>
                   <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.mode} onChange={(event) => setScheduleForm((prev) => ({ ...prev, mode: event.target.value }))}>
                     <option value="ONLINE">ONLINE</option>

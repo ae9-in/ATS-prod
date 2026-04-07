@@ -221,7 +221,7 @@ model Interview {
   id                         String            @id @default(uuid()) @db.Uuid
   applicationId              String            @map("application_id") @db.Uuid
   roundNo                    Int               @map("round_no")
-  interviewerId              String            @map("interviewer_id") @db.Uuid
+  round                      String?           @db.VarChar(50)
   scheduledStart             DateTime          @map("scheduled_start") @db.Timestamptz(6)
   scheduledEnd               DateTime?         @map("scheduled_end") @db.Timestamptz(6)
   mode                       InterviewMode
@@ -232,12 +232,11 @@ model Interview {
   createdById                String            @map("created_by") @db.Uuid
   createdAt                  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   application                Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  interviewer                User              @relation("InterviewInterviewer", fields: [interviewerId], references: [id])
+  interviewers               User[]            @relation("InterviewInterviewer")
   createdBy                  User              @relation("InterviewCreatedBy", fields: [createdById], references: [id])
   voiceRecordingFile         FileMeta?         @relation("InterviewRecordingFile", fields: [voiceRecordingFileId], references: [id])
   feedback                   InterviewFeedback?
 
-  @@index([interviewerId, scheduledStart])
   @@map("interviews")
 }
 

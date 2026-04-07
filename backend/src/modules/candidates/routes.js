@@ -614,7 +614,7 @@ router.get(
         },
         interviews: {
           include: {
-            interviewer: { select: { id: true, fullName: true, role: true } },
+            interviewers: { select: { id: true, fullName: true, role: true } },
             feedback: {
               select: {
                 recommendation: true,
@@ -662,7 +662,7 @@ router.get(
           roundNo: interview.roundNo,
           mode: interview.mode,
           scheduledStart: interview.scheduledStart,
-          interviewer: interview.interviewer,
+          interviewers: interview.interviewers,
           result: interview.result,
         });
 

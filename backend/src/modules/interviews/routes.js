@@ -36,7 +36,7 @@ router.get(
               job: { select: { title: true } },
             },
           },
-          interviewer: { select: { fullName: true } },
+          interviewers: { select: { fullName: true } },
         },
         orderBy: { scheduledStart: "asc" },
       });
@@ -61,7 +61,8 @@ router.get(
 
           doc.fontSize(13).fillColor("#071f52").text(`${timeStr} - ${item.application?.candidate?.fullName || "N/A"}`, { underline: true });
           doc.fontSize(10).fillColor("#333").text(`Round: ${item.roundNo} | Role: ${item.application?.job?.title || "General"}`);
-          doc.text(`Interviewer: ${item.interviewer?.fullName || "N/A"} | Mode: ${item.mode}`);
+          const interviewerNames = item.interviewers?.map((u) => u.fullName).join(", ") || "N/A";
+          doc.text(`Interviewers: ${interviewerNames} | Mode: ${item.mode}`);
           doc.fillColor("#666").text(`Contact: ${item.application?.candidate?.email || item.application?.candidate?.phone || "N/A"}`);
           doc.moveDown(1.5);
         });
@@ -84,45 +85,50 @@ router.post(
   asyncHandler(async (req, res) => {
     const {
       applicationId,
-      roundNo,
-      interviewerId,
+      roundNo, // Keep for legacy if needed
+      round,   // New specific label
+      interviewerIds, // New array
       scheduledStart,
       scheduledEnd = null,
       mode,
       meetingLink = null,
     } = req.body;
 
-    if (!applicationId || !roundNo || !interviewerId || !scheduledStart || !mode) {
+    if (!applicationId || !interviewerIds || !Array.isArray(interviewerIds) || interviewerIds.length === 0 || !scheduledStart || !mode) {
       throw new ApiError(
         400,
-        "applicationId, roundNo, interviewerId, scheduledStart, and mode are required",
+        "applicationId, interviewerIds (array), scheduledStart, and mode are required",
       );
     }
     if (!["ONLINE", "OFFLINE", "PHONE"].includes(mode)) {
       throw new ApiError(400, "mode must be ONLINE, OFFLINE, or PHONE");
     }
 
-    const [application, interviewer] = await Promise.all([
+    const [application, interviewers] = await Promise.all([
       prisma.application.findUnique({ where: { id: applicationId }, select: { id: true } }),
-      prisma.user.findUnique({
-        where: { id: interviewerId },
-        select: { id: true, role: true, status: true },
+      prisma.user.findMany({
+        where: { id: { in: interviewerIds } },
+        select: { id: true, status: true },
       }),
     ]);
+
     if (!application) throw new ApiError(404, "Application not found");
-    if (!interviewer) throw new ApiError(404, "Interviewer not found");
-    if (interviewer.status !== "ACTIVE") throw new ApiError(400, "Interviewer is inactive");
+    if (interviewers.length !== interviewerIds.length) throw new ApiError(404, "One or more interviewers not found");
+    if (interviewers.some(u => u.status !== "ACTIVE")) throw new ApiError(400, "One or more interviewers are inactive");
 
     const interview = await prisma.interview.create({
       data: {
         applicationId,
-        roundNo,
-        interviewerId,
+        roundNo: parseInt(roundNo) || 1,
+        round: round || `Round ${roundNo}`,
         scheduledStart: new Date(scheduledStart),
         scheduledEnd: scheduledEnd ? new Date(scheduledEnd) : null,
         mode,
         meetingLink,
         createdById: req.user.id,
+        interviewers: {
+          connect: interviewerIds.map(id => ({ id }))
+        }
       },
       include: {
         application: {
@@ -132,7 +138,7 @@ router.post(
             job: { select: { id: true, title: true } },
           },
         },
-        interviewer: { select: { id: true, fullName: true, email: true } },
+        interviewers: { select: { id: true, fullName: true, email: true } },
       },
     });
 
@@ -143,8 +149,8 @@ router.post(
       entityId: interview.id,
       newData: {
         applicationId,
-        roundNo,
-        interviewerId,
+        round,
+        interviewerIds,
         scheduledStart,
         scheduledEnd,
         mode,
@@ -163,7 +169,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const where = {};
     if (req.query.applicationId) where.applicationId = req.query.applicationId;
-    if (req.query.interviewerId) where.interviewerId = req.query.interviewerId;
+    if (req.query.interviewerId) {
+      where.interviewers = { some: { id: req.query.interviewerId } };
+    }
     if (req.query.mode) where.mode = req.query.mode;
 
     if (req.query.from || req.query.to) {
@@ -183,7 +191,7 @@ router.get(
             job: { select: { id: true, title: true } },
           },
         },
-        interviewer: { select: { id: true, fullName: true, email: true } },
+        interviewers: { select: { id: true, fullName: true, email: true } },
         feedback: true,
         voiceRecordingFile: {
           select: {
@@ -217,13 +225,13 @@ router.post(
 
     const interview = await prisma.interview.findUnique({
       where: { id },
-      include: { voiceRecordingFile: true },
+      include: { voiceRecordingFile: true, interviewers: { select: { id: true } } },
     });
     if (!interview) {
       throw new ApiError(404, "Interview not found");
     }
 
-    if (req.user.role === "INTERVIEWER" && interview.interviewerId !== req.user.id) {
+    if (req.user.role === "INTERVIEWER" && !interview.interviewers.some(u => u.id === req.user.id)) {
       throw new ApiError(403, "You can upload recording only for your assigned interview");
     }
 
@@ -307,11 +315,11 @@ router.post(
 
     const interview = await prisma.interview.findUnique({
       where: { id },
-      select: { id: true, interviewerId: true, result: true, mandatoryFeedbackSubmitted: true },
+      select: { id: true, result: true, mandatoryFeedbackSubmitted: true, interviewers: { select: { id: true } } },
     });
     if (!interview) throw new ApiError(404, "Interview not found");
 
-    if (req.user.role === "INTERVIEWER" && interview.interviewerId !== req.user.id) {
+    if (req.user.role === "INTERVIEWER" && !interview.interviewers.some(u => u.id === req.user.id)) {
       throw new ApiError(403, "You can only submit feedback for interviews assigned to you");
     }
 
