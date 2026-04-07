@@ -37,6 +37,8 @@ const Candidates = () => {
   const [shortlistFilter, setShortlistFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [categoriesList, setCategoriesList] = useState(['Company', 'College Drive']);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
   const [form, setForm] = useState(initialForm);
   const [bulkFile, setBulkFile] = useState(null);
   const [customDefinitions, setCustomDefinitions] = useState([]);
@@ -257,6 +259,11 @@ const Candidates = () => {
                   {showCustomFieldSetup ? 'Close Fields' : 'Custom Fields'}
                 </button>
               ) : null}
+              {canManageCandidates ? (
+                <button className="os-btn-outline" type="button" onClick={() => setShowAddCategory(v => !v)}>
+                  {showAddCategory ? 'Cancel' : '+ Category'}
+                </button>
+              ) : null}
               <UserChip fallbackName="Alex Rivera" fallbackRole="Recruiting Lead" avatarSeed="candidate-user" />
             </>
           }
@@ -355,20 +362,30 @@ const Candidates = () => {
           </button>
         </div>
 
-        {canManageCandidates ? (
-          <form className="os-card mt-4 p-3 flex flex-wrap gap-2 items-center" onSubmit={onBulkUpload}>
-            <input
-              className="os-file-input max-w-[520px]"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(event) => setBulkFile(event.target.files?.[0] || null)}
+        {showAddCategory && (
+          <Reveal className="os-card mt-4 p-4 flex items-center gap-3">
+            <input 
+              className="h-10 flex-1 rounded-lg border border-[#dbe4ee] px-3 text-sm"
+              placeholder="New category name (e.g., Campus Hire)"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              autoFocus
             />
-            <button className="os-btn-outline" type="submit" disabled={saving}>
-              {saving ? 'Uploading...' : 'Bulk Upload Excel'}
+            <button 
+              className="os-btn-primary"
+              onClick={() => {
+                if (newCatName.trim()) {
+                  setCategoriesList(prev => [...new Set([...prev, newCatName.trim()])]);
+                  setNewCatName('');
+                  setShowAddCategory(false);
+                  setBanner(`Category "${newCatName.trim()}" added to your local list.`);
+                }
+              }}
+            >
+              Add Category
             </button>
-            <span className="text-xs text-[#6f7d98]">Columns: fullName, email, phone, currentCompany, totalExperienceYears, source</span>
-          </form>
-        ) : null}
+          </Reveal>
+        )}
 
         {showCustomFieldSetup && canManageCandidates ? (
           <Reveal className="os-card mt-4 p-5">
