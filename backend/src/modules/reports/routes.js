@@ -388,7 +388,7 @@ router.get(
     const format = String(req.query.format || "excel").trim().toLowerCase();
 
     if (report === "dailyinterviews") {
-      const { start, end } = req.query;
+      const { start, end, date } = req.query;
       if (!start || !end) throw new ApiError(400, "Start and end ISO timestamps are required");
 
       const interviews = await prisma.interview.findMany({

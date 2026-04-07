@@ -113,7 +113,7 @@ const InterviewSchedule = () => {
 
       const token = localStorage.getItem('ats_token');
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&token=${token}`;
+      const downloadUrl = `${baseUrl.replace(/\/$/, '')}/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&date=${encodeURIComponent(dateStr)}&token=${token}`;
       
       // Strong Fix: Use a native browser download link
       const a = document.createElement('a');
