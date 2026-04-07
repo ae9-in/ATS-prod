@@ -347,4 +347,49 @@ router.post(
   }),
 );
 
+router.delete(
+  "/:id",
+  requireRoles("SUPER_ADMIN"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (id === req.user.id) {
+      throw new ApiError(400, "You cannot delete your own account");
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, email: true, role: true },
+    });
+    if (!existing) {
+      throw new ApiError(404, "User not found");
+    }
+
+    try {
+      await prisma.user.delete({ where: { id } });
+
+      await logAudit({
+        actorUserId: req.user.id,
+        action: "DELETE_USER",
+        entityType: "USER",
+        entityId: id,
+        oldData: existing,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ success: true, message: "User deleted successfully" });
+    } catch (err) {
+      // P2003 is Prisma's error code for Foreign Key constraint failed
+      if (err.code === "P2003") {
+        throw new ApiError(
+          400,
+          "Cannot delete user: this account is linked to existing records (jobs, candidates, or audits). Deactivate the account instead.",
+        );
+      }
+      throw err;
+    }
+  }),
+);
+
 module.exports = router;

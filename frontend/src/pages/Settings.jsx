@@ -165,6 +165,22 @@ const Settings = () => {
     }
   };
 
+  const onDeleteUser = async (member) => {
+    if (!window.confirm(`Are you sure you want to COMPLETELY delete the account for "${member.fullName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setError('');
+    setBanner('');
+    try {
+      await apiDelete(`/users/${member.id}`);
+      await loadAll();
+      setBanner(`User "${member.fullName}" has been permanently deleted.`);
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
+    }
+  };
+
   const uploadUserPhoto = async () => {
     if (!userPhotoFile) return;
     setError('');
@@ -354,6 +370,9 @@ const Settings = () => {
                       <button className="os-btn-outline !h-9" type="button" onClick={() => onStartEdit(member)}>Edit</button>
                       <button className="os-btn-outline !h-9" type="button" onClick={() => onToggleStatus(member)}>
                         {member.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button className="os-btn-outline !h-9 !text-red-600 hover:!bg-red-50 hover:!border-red-200" type="button" onClick={() => onDeleteUser(member)}>
+                        Delete
                       </button>
                     </div>
                   </div>
