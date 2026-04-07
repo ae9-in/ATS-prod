@@ -225,14 +225,97 @@ function sendPdf(res, reportName, rows) {
   );
   res.setHeader("Content-Type", "application/pdf");
 
-  const doc = new PDFDocument({ margin: 40 });
+  const doc = new PDFDocument({ margin: 50, size: "A4" });
   doc.pipe(res);
-  doc.fontSize(16).text(`${reportName.replace("-", " ").toUpperCase()} REPORT`);
-  doc.moveDown();
 
+  // Header Section
+  doc.fillColor("#071f52").fontSize(20).text("Enterprise ATS Report", { align: "left" });
+  doc.fillColor("#6b7895").fontSize(10).text(`${reportName.replace("-", " ").toUpperCase()}`, { align: "left" });
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, { align: "left" });
+  doc.moveDown(2);
+
+  if (rows.length === 0) {
+    doc.fontSize(12).fillColor("#333").text("No data available for this report.");
+    doc.end();
+    return;
+  }
+
+  // Table Configuration based on report
+  let columns = [];
+  if (reportName === "recruiter-activity") {
+    columns = [
+      { header: "Recruiter", key: "recruiterName", width: 150 },
+      { header: "Status", key: "status", width: 70 },
+      { header: "Jobs", key: "jobsCreated", width: 60 },
+      { header: "Candidates", key: "candidatesCreated", width: 80 },
+      { header: "Interviews", key: "interviewsScheduled", width: 80 },
+    ];
+  } else {
+    // Default to hiring-progress
+    columns = [
+      { header: "Job Title", key: "title", width: 160 },
+      { header: "Dept", key: "department", width: 90 },
+      { header: "Apps", key: "totalApplications", width: 50 },
+      { header: "Pipe", key: "inPipeline", width: 50 },
+      { header: "Sel", key: "selected", width: 50 },
+      { header: "Join", key: "joined", width: 50 },
+    ];
+  }
+
+  const startX = 50;
+  let startY = doc.y;
+  const rowHeight = 25;
+  const tableWidth = columns.reduce((acc, col) => acc + col.width, 0);
+
+  // Draw Table Headers
+  doc.rect(startX, startY, tableWidth, rowHeight).fill("#1f52cc");
+  doc.fillColor("#ffffff").fontSize(10);
+  
+  let currentX = startX;
+  columns.forEach((col) => {
+    doc.text(col.header, currentX + 5, startY + 7, { width: col.width - 10, align: "left" });
+    currentX += col.width;
+  });
+
+  startY += rowHeight;
+
+  // Draw Table Rows
+  doc.fillColor("#1b2444").fontSize(9);
   rows.forEach((row, index) => {
-    doc.fontSize(10).text(`${index + 1}. ${JSON.stringify(row)}`);
-    doc.moveDown(0.3);
+    // Alternate row background
+    if (index % 2 === 1) {
+      doc.rect(startX, startY, tableWidth, rowHeight).fill("#f8fbff");
+      doc.fillColor("#1b2444");
+    }
+
+    currentX = startX;
+    columns.forEach((col) => {
+      const val = row[col.key] !== undefined ? String(row[col.key]) : "-";
+      doc.text(val, currentX + 5, startY + 8, { width: col.width - 10, align: "left" });
+      currentX += col.width;
+    });
+
+    // Draw horizontal line
+    doc.strokeColor("#ebeff4").lineWidth(0.5).moveTo(startX, startY + rowHeight).lineTo(startX + tableWidth, startY + rowHeight).stroke();
+
+    startY += rowHeight;
+
+    // Page break handling
+    if (startY > 750) {
+      doc.addPage();
+      startY = 50;
+      
+      // Re-draw headers on new page
+      doc.rect(startX, startY, tableWidth, rowHeight).fill("#1f52cc");
+      doc.fillColor("#ffffff").fontSize(10);
+      currentX = startX;
+      columns.forEach((col) => {
+        doc.text(col.header, currentX + 5, startY + 7, { width: col.width - 10, align: "left" });
+        currentX += col.width;
+      });
+      startY += rowHeight;
+      doc.fillColor("#1b2444").fontSize(9);
+    }
   });
 
   doc.end();
