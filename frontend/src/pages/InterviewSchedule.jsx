@@ -8,7 +8,8 @@ import { apiGet, apiGetBlob, apiPost, getStoredUser } from '../lib/api';
 import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
 
 const emptyScheduleForm = {
-  applicationId: '',
+  candidateId: '',
+  jobId: '',
   roundNo: 1,
   round: 'Round 1',
   interviewerIds: [],
@@ -32,6 +33,8 @@ const InterviewSchedule = () => {
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [interviewers, setInterviewers] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [error, setError] = useState('');
@@ -59,9 +62,11 @@ const InterviewSchedule = () => {
   const recorderSupported = typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined';
 
   const loadAll = async () => {
-    const [interviewsRes, applicationsRes] = await Promise.all([
+    const [interviewsRes, applicationsRes, candidatesRes, jobsRes] = await Promise.all([
       apiGet('/interviews'),
       apiGet('/applications?limit=200'),
+      apiGet('/candidates?limit=200'),
+      apiGet('/jobs?limit=200'),
     ]);
 
     let interviewerRows = [];
@@ -77,6 +82,8 @@ const InterviewSchedule = () => {
     const interviewRows = interviewsRes.data || [];
     setInterviews(interviewRows);
     setApplications(applicationsRes.data || []);
+    setCandidates(candidatesRes.data || []);
+    setJobs(jobsRes.data || []);
     setInterviewers(interviewerRows);
     setSelectedId((prev) => prev || interviewRows[0]?.id || '');
   };
@@ -215,12 +222,27 @@ const InterviewSchedule = () => {
     try {
       setSavingSchedule(true);
       
+      let targetApplicationId = '';
+      // Find if an application already exists for this candidate + job
+      const existingApp = applications.find(a => a.candidateId === scheduleForm.candidateId && a.jobId === scheduleForm.jobId);
+      
+      if (existingApp) {
+        targetApplicationId = existingApp.id;
+      } else {
+        // Create a new application on the fly
+        const newAppRes = await apiPost('/applications', {
+          candidateId: scheduleForm.candidateId,
+          jobId: scheduleForm.jobId
+        });
+        targetApplicationId = newAppRes.data.id;
+      }
+
       // Determine round number from label
       const roundMap = { 'Round 1': 1, 'Round 2': 2, 'Formal HR Round': 3 };
       const roundNo = roundMap[scheduleForm.round] || 1;
 
       await apiPost('/interviews', {
-        applicationId: scheduleForm.applicationId,
+        applicationId: targetApplicationId,
         roundNo,
         round: scheduleForm.round,
         interviewerIds: scheduleForm.interviewerIds,
@@ -665,15 +687,40 @@ const InterviewSchedule = () => {
             <form className="os-card p-4 mt-2" onSubmit={onScheduleSubmit}>
               <div className="text-sm font-semibold text-[#142651] mb-3">Schedule Interview</div>
               <div className="space-y-2">
-                <select className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.applicationId} onChange={(event) => setScheduleForm((prev) => ({ ...prev, applicationId: event.target.value }))} required>
-                  <option value="">Select application</option>
-                  {applications.map((application) => (
-                    <option key={application.id} value={application.id}>
-                      {(application.candidate?.fullName || 'Candidate')} - {(application.job?.title || 'Role')}
-                    </option>
+                <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Candidate</div>
+                <select 
+                  className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" 
+                  value={scheduleForm.candidateId} 
+                  onChange={(event) => {
+                    const cId = event.target.value;
+                    setScheduleForm((prev) => {
+                      // If candidate already has an application, pre-fill the job if possible
+                      const existing = applications.find(a => a.candidateId === cId);
+                      return { ...prev, candidateId: cId, jobId: existing?.jobId || prev.jobId };
+                    });
+                  }} 
+                  required
+                >
+                  <option value="">Choose candidate...</option>
+                  {candidates.map((c) => (
+                    <option key={c.id} value={c.id}>{c.fullName} {c.email ? `(${c.email})` : ''}</option>
                   ))}
                 </select>
-                <div className="text-xs font-semibold text-[#6d7893] mt-1">Select Interviewers (Multiple)</div>
+
+                <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Job</div>
+                <select 
+                  className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" 
+                  value={scheduleForm.jobId} 
+                  onChange={(event) => setScheduleForm((prev) => ({ ...prev, jobId: event.target.value }))} 
+                  required
+                >
+                  <option value="">Choose job role...</option>
+                  {jobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
+                  ))}
+                </select>
+
+                <div className="text-xs font-semibold text-[#6d7893] mt-1">Select Interviewers / Recruiters (Multiple)</div>
                 <div className="max-h-32 overflow-y-auto border border-[#dbe4ee] rounded-lg p-2 space-y-1 bg-white">
                   {interviewers.map((person) => (
                     <label key={person.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
@@ -690,7 +737,7 @@ const InterviewSchedule = () => {
                           });
                         }}
                       />
-                      <span className="text-xs text-[#2a344f]">{person.fullName}</span>
+                      <span className="text-xs text-[#2a344f]">{person.fullName} <span className="os-muted text-[10px]">({person.role})</span></span>
                     </label>
                   ))}
                 </div>

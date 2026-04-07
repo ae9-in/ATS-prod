@@ -46,7 +46,7 @@ router.get(
     const users = await prisma.user.findMany({
       where: {
         status: "ACTIVE",
-        role: "INTERVIEWER",
+        role: { in: ["INTERVIEWER", "RECRUITER"] },
       },
       orderBy: { fullName: "asc" },
       select: {
