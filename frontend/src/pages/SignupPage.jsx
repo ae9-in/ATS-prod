@@ -22,6 +22,7 @@ const SignupPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -184,13 +185,21 @@ const SignupPage = () => {
               onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
             />
             <div className="grid grid-cols-1 gap-3">
-              <input
-                className="h-12 rounded-xl border border-[#e2e8ef] bg-[#f3f6f8] px-4 text-sm"
-                placeholder="Password"
-                type="password"
-                value={form.password}
-                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              />
+              <div className="relative">
+                <input
+                  className="w-full h-12 rounded-xl border border-[#e2e8ef] bg-[#f3f6f8] px-4 pr-10 text-sm"
+                  placeholder="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
+                <span 
+                  className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#7b86a1] cursor-pointer select-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </div>
             </div>
           </div>
 

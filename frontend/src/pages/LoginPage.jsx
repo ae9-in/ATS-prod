@@ -12,6 +12,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
@@ -149,11 +150,16 @@ const LoginPage = () => {
               <input
                 className="w-full h-12 rounded-xl border border-[#e2e8ef] bg-[#f3f6f8] px-4 pr-10 text-sm"
                 placeholder="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#7b86a1]">visibility</span>
+              <span 
+                className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#7b86a1] cursor-pointer select-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? 'visibility_off' : 'visibility'}
+              </span>
             </div>
           </div>
 
