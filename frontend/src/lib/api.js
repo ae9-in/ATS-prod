@@ -1,4 +1,4 @@
-﻿const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
 function getToken() {
   return localStorage.getItem('ats_token');
@@ -48,6 +48,10 @@ export function apiPost(path, body) {
 
 export function apiPatch(path, body) {
   return request(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+export function apiDelete(path) {
+  return request(path, { method: 'DELETE' });
 }
 
 export function clearAuth() {

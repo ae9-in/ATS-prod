@@ -3,7 +3,7 @@ import EnterpriseLayout, { EnterpriseSidebar, EnterpriseTopbar } from '../compon
 import { PageEnter, Reveal } from '../components/PageMotion';
 import UserChip from '../components/UserChip';
 import NotificationBell from '../components/NotificationBell';
-import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
 
 const emptyUserForm = {
