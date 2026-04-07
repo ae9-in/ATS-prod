@@ -35,6 +35,7 @@ const Pipeline = () => {
   const [error, setError] = useState('');
   const [banner, setBanner] = useState('');
   const [loading, setLoading] = useState(true);
+  const [moveRemarks, setMoveRemarks] = useState({});
   const [movingId, setMovingId] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showStageCreate, setShowStageCreate] = useState(false);
@@ -178,9 +179,15 @@ const Pipeline = () => {
     setBanner('');
     setMovingId(applicationId);
     try {
+      const remark = moveRemarks[applicationId] || 'Moved from pipeline board';
       await apiPatch(`/pipeline/applications/${applicationId}/move`, {
         toStageId,
-        remark: 'Moved from pipeline board',
+        remark,
+      });
+      setMoveRemarks((prev) => {
+        const next = { ...prev };
+        delete next[applicationId];
+        return next;
       });
       await loadAll();
       setBanner('Application moved successfully.');
@@ -433,6 +440,14 @@ const Pipeline = () => {
                                 <option key={stage.id} value={stage.id}>{stage.name}</option>
                               ))}
                             </select>
+                            <input
+                              type="text"
+                              placeholder="Add a remark (optional)..."
+                              className="mt-2 h-9 w-full rounded-lg border border-[#dbe4ee] px-2 text-xs"
+                              value={moveRemarks[app.id] || ''}
+                              onChange={(event) => setMoveRemarks((prev) => ({ ...prev, [app.id]: event.target.value }))}
+                              disabled={!canMovePipeline || movingId === app.id}
+                            />
                             <div className="mt-2 flex gap-2">
                               {canMovePipeline ? (
                                 <button className="os-btn-primary !h-9 flex-1" type="button" onClick={() => onMoveStage(app.id)} disabled={movingId === app.id}>
@@ -449,7 +464,9 @@ const Pipeline = () => {
 
                           {(historyByApp[app.id] || []).length > 0 ? (
                             <div className="mt-3 text-[11px] text-[#5f6b86] border-t border-[#edf1f6] pt-2">
-                              Last move: {(historyByApp[app.id][0]?.toStage?.name || 'Unknown')} by {(historyByApp[app.id][0]?.movedBy?.fullName || 'System')}
+                              <div className="font-semibold">Last move: {(historyByApp[app.id][0]?.toStage?.name || 'Unknown')}</div>
+                              <div className="italic mt-0.5">"{historyByApp[app.id][0]?.remark || 'No remark provided'}"</div>
+                              <div className="mt-1 opacity-70">By {(historyByApp[app.id][0]?.movedBy?.fullName || 'System')}</div>
                             </div>
                           ) : null}
                         </div>
