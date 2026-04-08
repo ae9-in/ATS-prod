@@ -67,8 +67,8 @@ jobs:
       - name: Install backend deps
         run: npm ci
 
-      - name: Prisma migrate deploy
-        run: npm run prisma:deploy
+      - name: Prisma db push
+        run: npx prisma db push --skip-generate
 
       - name: Prisma seed
         run: npm run prisma:seed
