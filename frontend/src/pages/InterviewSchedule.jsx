@@ -166,12 +166,52 @@ const InterviewSchedule = () => {
     return days;
   }, [viewDate]);
 
-  const selectedInterview = useMemo(
-    () => interviews.find((item) => item.id === selectedId) || interviews[0] || null,
-    [interviews, selectedId],
+  const groupedApplications = useMemo(() => {
+    const map = new Map();
+    interviews.forEach((interview) => {
+      const appId = interview.applicationId;
+      if (!map.has(appId)) {
+        map.set(appId, {
+          application: interview.application,
+          interviews: [],
+          latestInterview: interview,
+        });
+      }
+      const group = map.get(appId);
+      group.interviews.push(interview);
+      // Sort interviews by date descending to find latest
+      if (new Date(interview.scheduledStart) > new Date(group.latestInterview.scheduledStart)) {
+        group.latestInterview = interview;
+      }
+    });
+    // Return sorted by latest interview date
+    return Array.from(map.values()).sort((a, b) => 
+      new Date(b.latestInterview.scheduledStart) - new Date(a.latestInterview.scheduledStart)
+    );
+  }, [interviews]);
+
+  const selectedGroupId = selectedId || groupedApplications[0]?.application?.id || '';
+  const selectedGroup = useMemo(
+    () => groupedApplications.find((g) => g.application.id === selectedGroupId) || groupedApplications[0] || null,
+    [groupedApplications, selectedGroupId],
   );
 
-  const selectedCandidate = selectedInterview?.application?.candidate;
+  const selectedCandidate = selectedGroup?.application?.candidate;
+  const latestInterview = selectedGroup?.latestInterview;
+  
+  // For the individual interview context (e.g. feedback submission), default to latest
+  const [activeInterviewId, setActiveInterviewId] = useState('');
+  useEffect(() => {
+    if (latestInterview && !activeInterviewId) {
+      setActiveInterviewId(latestInterview.id);
+    }
+  }, [latestInterview, activeInterviewId]);
+
+  const selectedInterview = useMemo(
+    () => selectedGroup?.interviews.find(i => i.id === (activeInterviewId || latestInterview?.id)) || latestInterview,
+    [selectedGroup, activeInterviewId, latestInterview]
+  );
+
   const selectedFeedbacks = selectedInterview?.feedbacks || [];
   const myFeedback = selectedFeedbacks.find(f => f.submittedById === currentUser?.id);
 
@@ -471,13 +511,17 @@ const InterviewSchedule = () => {
             <h2 className="text-2xl font-semibold font-[Manrope] px-2">Interviews</h2>
             {loading ? <div className="text-xs text-[#a1acbd] animate-pulse">Syncing...</div> : null}
           </div>
-          {interviews.map((row) => {
-            const candidate = row.application?.candidate;
+          {groupedApplications.map((group) => {
+            const candidate = group.application?.candidate;
+            const appId = group.application?.id;
             return (
               <button
-                key={row.id}
-                className={`w-full text-left flex gap-3 p-3 rounded-xl mb-1 ${selectedInterview?.id === row.id ? 'bg-[#eef3ff] border-l-4 border-[#1f4bc6]' : 'hover:bg-[#f6f9fc]'}`}
-                onClick={() => setSelectedId(row.id)}
+                key={appId}
+                className={`w-full text-left flex gap-3 p-3 rounded-xl mb-1 ${selectedGroupId === appId ? 'bg-[#eef3ff] border-l-4 border-[#1f4bc6]' : 'hover:bg-[#f6f9fc]'}`}
+                onClick={() => {
+                  setSelectedId(appId);
+                  setActiveInterviewId(group.latestInterview.id);
+                }}
                 type="button"
               >
                 {candidate?.profilePhotoFile?.storageKey ? (
@@ -489,9 +533,9 @@ const InterviewSchedule = () => {
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{candidate?.fullName || 'Candidate'}</div>
-                  <div className="text-xs text-[#6f7894] truncate">{row.application?.job?.title || 'Interview conversation'}</div>
-                  <div className="text-[11px] text-[#7d88a4] mt-1">
-                    {row.scheduledStart ? new Date(row.scheduledStart).toLocaleString() : 'Not scheduled'}
+                  <div className="text-xs text-[#6f7894] truncate">{group.application?.job?.title || 'Applied Role'}</div>
+                  <div className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded inline-block mt-1">
+                    {group.interviews.length} {group.interviews.length === 1 ? 'Round' : 'Rounds'}
                   </div>
                 </div>
               </button>
@@ -568,16 +612,40 @@ const InterviewSchedule = () => {
             {error ? <div className="os-card p-3 text-xs text-red-600">{error}</div> : null}
             {banner ? <div className="os-card p-3 text-xs text-[#2454cf]">{banner}</div> : null}
 
+            {/* Rounds Selector */}
+            {selectedGroup?.interviews.length > 1 && (
+              <div className="flex bg-white rounded-xl p-1 border border-[#e4ebf1] gap-1">
+                {selectedGroup.interviews.sort((a,b) => a.roundNo - b.roundNo).map((iv) => (
+                  <button
+                    key={iv.id}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeInterviewId === iv.id ? 'bg-[#1f52cc] text-white shadow-sm' : 'text-[#7a88a3] hover:bg-gray-50'}`}
+                    onClick={() => setActiveInterviewId(iv.id)}
+                  >
+                    Round {iv.roundNo}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="os-card p-4 text-sm text-[#2a344f]">
-              <div className="font-semibold text-[#142651] mb-2">Current Interview Details</div>
-              <div>Role: {selectedInterview?.application?.job?.title || '-'}</div>
-              <div>Interviewers: {selectedInterview?.interviewers?.map(u => u.fullName).join(', ') || '-'}</div>
-              <div>Mode: {selectedInterview?.mode || '-'}</div>
-              <div>Status: {selectedInterview?.result || '-'}</div>
-              <div>Date: {selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-[#142651]">Interview Details ({selectedInterview?.round || `Round ${selectedInterview?.roundNo}`})</div>
+                <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  selectedInterview?.result === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' : 
+                  selectedInterview?.result === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
+                }`}>
+                  {selectedInterview?.result || 'PENDING'}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-y-1 text-xs sm:text-sm">
+                <div className="text-[#6d7893]">Role:</div> <div>{selectedInterview?.application?.job?.title || '-'}</div>
+                <div className="text-[#6d7893]">Interviewers:</div> <div>{selectedInterview?.interviewers?.map(u => u.fullName).join(', ') || '-'}</div>
+                <div className="text-[#6d7893]">Mode:</div> <div>{selectedInterview?.mode || '-'}</div>
+                <div className="text-[#6d7893]">Date:</div> <div>{selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
+              </div>
               {selectedInterview?.voiceRecordingFile?.storageKey ? (
                 <a 
-                  className="text-[#1f4bc6] inline-block mt-2" 
+                  className="text-[#1f4bc6] inline-block mt-3 bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold border border-blue-100" 
                   href={selectedInterview.voiceRecordingFile.storageKey?.startsWith('http')
                     ? selectedInterview.voiceRecordingFile.storageKey
                     : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${selectedInterview.voiceRecordingFile.storageKey}`
@@ -585,6 +653,7 @@ const InterviewSchedule = () => {
                   target="_blank" 
                   rel="noreferrer"
                 >
+                  <span className="material-symbols-outlined align-middle mr-1 text-sm">play_circle</span>
                   Listen Recording: {selectedInterview.voiceRecordingFile.originalName}
                 </a>
               ) : null}
@@ -593,7 +662,7 @@ const InterviewSchedule = () => {
             {/* Candidate Journey Timeline */}
             <div className="os-card p-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="font-semibold text-[#142651]">Round History</div>
+                <div className="font-semibold text-[#142651]">Full Journey History</div>
                 {loadingHistory && <div className="text-[10px] text-blue-500 animate-pulse">Syncing...</div>}
               </div>
               <div className="space-y-4 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#e4ebf1]">
@@ -613,15 +682,15 @@ const InterviewSchedule = () => {
                     </div>
                     <div className="text-sm font-semibold text-[#142651]">
                       {event.type === 'INTERVIEW_SCHEDULED' ? `Round ${event.roundNo} Scheduled` : 
-                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `Feedback: ${event.recommendation}` : 
+                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `${event.submittedBy?.fullName || 'Feedback'}: ${event.recommendation}` : 
                        event.type.replace(/_/g, ' ')}
                     </div>
                     <div className="text-[11px] text-[#6f7894] mb-1">
                       {new Date(event.at).toLocaleString()}
                     </div>
-                    {event.overallComments && (
-                      <div className="text-xs text-[#5e6a85] bg-[#f8fbff] p-2 rounded-lg border border-[#eef3ff]">
-                        "{event.overallComments}"
+                    {event.remark && (
+                      <div className="text-xs text-[#5e6a85] bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        {event.remark}
                       </div>
                     )}
                   </div>
