@@ -910,6 +910,7 @@ const InterviewSchedule = () => {
             <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Potential Concerns..." value={feedbackForm.concerns} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, concerns: event.target.value }))} required />
             <select className="mt-2 h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={feedbackForm.recommendation} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, recommendation: event.target.value }))}>
               <option value="PASS">PASS</option>
+              <option value="OFFER">OFFER (Move to Selected)</option>
               <option value="FAIL">FAIL</option>
               <option value="HOLD">HOLD</option>
               <option value="PENDING">PENDING</option>
