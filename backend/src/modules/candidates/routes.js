@@ -841,4 +841,38 @@ router.get(
   }),
 );
 
+router.delete(
+  "/:id",
+  requireRoles("SUPER_ADMIN", "RECRUITER"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!isUUID(id)) throw new ApiError(400, "Invalid candidate ID format");
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id },
+      select: { id: true, fullName: true },
+    });
+
+    if (!candidate) {
+      throw new ApiError(404, "Candidate not found");
+    }
+
+    await prisma.candidate.delete({
+      where: { id },
+    });
+
+    await logAudit({
+      actorUserId: req.user.id,
+      action: "DELETE_CANDIDATE",
+      entityType: "CANDIDATE",
+      entityId: id,
+      oldData: candidate,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.json({ success: true, message: "Candidate deleted successfully" });
+  }),
+);
+
 module.exports = router;

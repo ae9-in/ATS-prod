@@ -372,4 +372,47 @@ router.post(
   }),
 );
 
+router.delete(
+  "/:id",
+  requireRoles("SUPER_ADMIN", "RECRUITER"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    const interview = await prisma.interview.findUnique({
+      where: { id },
+      include: {
+        application: {
+          select: {
+            candidate: { select: { fullName: true } }
+          }
+        }
+      }
+    });
+
+    if (!interview) {
+      throw new ApiError(404, "Interview not found");
+    }
+
+    await prisma.interview.delete({
+      where: { id },
+    });
+
+    await logAudit({
+      actorUserId: req.user.id,
+      action: "DELETE_INTERVIEW",
+      entityType: "INTERVIEW",
+      entityId: id,
+      oldData: {
+        candidateName: interview.application?.candidate?.fullName,
+        round: interview.round,
+        scheduledStart: interview.scheduledStart
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.json({ success: true, message: "Interview deleted successfully" });
+  }),
+);
+
 module.exports = router;
