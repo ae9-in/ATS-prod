@@ -159,6 +159,40 @@ router.post(
       userAgent: req.headers["user-agent"],
     });
 
+    // --- Automated Pipeline Transition: Move to 'Interview' stage ---
+    try {
+      // Find the "Interview" stage for this job (or global)
+      const stage = await prisma.pipelineStage.findFirst({
+        where: {
+          name: { equals: "Interview", mode: "insensitive" },
+          OR: [
+            { jobId: interview.application.job.id },
+            { jobId: null }
+          ]
+        },
+        orderBy: { jobId: "desc" } // Prioritize job-specific stage
+      });
+
+      if (stage) {
+        await prisma.application.update({
+          where: { id: applicationId },
+          data: { currentStageId: stage.id }
+        });
+
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            stageId: stage.id,
+            changedById: req.user.id,
+            remark: `Auto-moved to Interview stage (Interview Scheduled: ${interview.round})`
+          }
+        });
+      }
+    } catch (err) {
+      console.error("[AUTO-TRANSITION] Failed to move application to Interview stage:", err);
+    }
+    // -------------------------------------------------------------
+
     res.status(201).json({ success: true, data: interview });
   }),
 );
@@ -313,7 +347,7 @@ router.post(
       );
     }
 
-    if (!["PASS", "FAIL", "HOLD", "PENDING"].includes(recommendation)) {
+    if (!["PASS", "FAIL", "HOLD", "PENDING", "OFFER"].includes(recommendation)) {
       throw new ApiError(400, "Invalid recommendation");
     }
 
@@ -367,6 +401,46 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
     });
+
+    // --- Automated Pipeline Transition: Move to 'Selected' if OFFER is recommended ---
+    if (recommendation === "OFFER") {
+      try {
+        const interviewFull = await prisma.interview.findUnique({
+          where: { id },
+          include: { application: { select: { id: true, jobId: true } } }
+        });
+
+        const stage = await prisma.pipelineStage.findFirst({
+          where: {
+            name: { equals: "Selected", mode: "insensitive" },
+            OR: [
+              { jobId: interviewFull.application.jobId },
+              { jobId: null }
+            ]
+          },
+          orderBy: { jobId: "desc" }
+        });
+
+        if (stage) {
+          await prisma.application.update({
+            where: { id: interviewFull.application.id },
+            data: { currentStageId: stage.id }
+          });
+
+          await prisma.stageHistory.create({
+            data: {
+              applicationId: interviewFull.application.id,
+              stageId: stage.id,
+              changedById: req.user.id,
+              remark: "Auto-moved to Selected stage (OFFER recommendation submitted)"
+            }
+          });
+        }
+      } catch (err) {
+        console.error("[AUTO-TRANSITION] Failed to move application to Selected stage:", err);
+      }
+    }
+    // --------------------------------------------------------------------------------
 
     res.status(201).json({ success: true, data: feedback });
   }),

@@ -43,7 +43,7 @@ router.post(
         phone: phone ? String(phone).trim() : null,
         passwordHash,
         role: normalizedRole,
-        status: "ACTIVE",
+        status: "PENDING",
       },
       select: {
         id: true,

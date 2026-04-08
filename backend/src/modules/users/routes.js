@@ -260,8 +260,8 @@ router.patch(
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["ACTIVE", "INACTIVE"].includes(status)) {
-      throw new ApiError(400, "status must be ACTIVE or INACTIVE");
+    if (!["ACTIVE", "INACTIVE", "PENDING"].includes(status)) {
+      throw new ApiError(400, "status must be ACTIVE, INACTIVE or PENDING");
     }
     if (id === req.user.id && status === "INACTIVE") {
       throw new ApiError(400, "You cannot deactivate your own account");

@@ -156,6 +156,15 @@ router.get(
           },
           job: { select: { id: true, title: true } },
           currentStage: true,
+          pipelineEvents: {
+            take: 20,
+            orderBy: { movedAt: "desc" },
+            include: {
+              fromStage: { select: { id: true, name: true } },
+              toStage: { select: { id: true, name: true } },
+              movedBy: { select: { id: true, fullName: true, role: true } },
+            },
+          },
         },
       }),
       prisma.application.count({ where }),
