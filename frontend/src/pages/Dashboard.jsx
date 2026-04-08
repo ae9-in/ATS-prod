@@ -162,6 +162,28 @@ const Dashboard = () => {
       { label: 'Interviewer Activity', value: activeRecruiters, tag: 'Coverage', href: '/team' },
     ].slice(0, 4);
   }, [applications, candidatesTotal, currentUser, interviews, jobsTotal, usersTotal]);
+165: 
+166:   const nextPersonalInterview = useMemo(() => {
+167:     if (!interviews.length) return null;
+168:     const now = new Date();
+169:     const upcoming = interviews
+170:       .filter((iv) => {
+171:         const start = new Date(iv.scheduledStart);
+172:         const isAssigned = iv.interviewers?.some((u) => u.id === currentUser?.id);
+173:         return isAssigned && start > now && !iv.mandatoryFeedbackSubmitted;
+174:       })
+175:       .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
+176: 
+177:     return upcoming[0] || null;
+178:   }, [interviews, currentUser?.id]);
+179: 
+180:   const isInterviewSoon = useMemo(() => {
+181:     if (!nextPersonalInterview) return false;
+182:     const start = new Date(nextPersonalInterview.scheduledStart);
+183:     const now = new Date();
+184:     const diffMs = start - now;
+185:     return diffMs > 0 && diffMs < 1000 * 60 * 60; // Less than 1 hour
+186:   }, [nextPersonalInterview]);
 
   return (
     <EnterpriseLayout
@@ -189,6 +211,39 @@ const Dashboard = () => {
       }
     >
       <PageEnter>
+        {nextPersonalInterview && (
+          <Reveal delay={0}>
+            <div 
+              className={`mb-6 p-1 rounded-2xl ${isInterviewSoon ? 'bg-gradient-to-r from-[#ff4d4d] to-[#f31262] animate-pulse shadow-[0_0_20px_rgba(243,18,98,0.3)]' : 'bg-gradient-to-r from-[#1f52cc] to-[#35b577]'} cursor-pointer`}
+              onClick={() => navigate('/schedule')}
+            >
+              <div className="bg-white/90 backdrop-blur-md rounded-[14px] p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl ${isInterviewSoon ? 'bg-[#ff4d4d]' : 'bg-[#1f52cc]'} flex items-center justify-center text-white`}>
+                    <span className="material-symbols-outlined text-2xl">event_upcoming</span>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest font-bold text-[#8b95ad]">Next Scheduled Interview</div>
+                    <div className="text-lg font-bold text-[#10193f]">
+                      {nextPersonalInterview.application?.candidate?.fullName} - {nextPersonalInterview.round}
+                    </div>
+                    <div className="text-xs text-[#5f6a84]">
+                      {new Date(nextPersonalInterview.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {isInterviewSoon ? `Starting in ${Math.round((new Date(nextPersonalInterview.scheduledStart) - new Date()) / 60000)} mins` : new Date(nextPersonalInterview.scheduledStart).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:block text-right">
+                    <div className="text-[10px] uppercase font-bold text-[#1f52cc]">{nextPersonalInterview.mode}</div>
+                    <div className="text-[11px] text-[#8b95ad]">{nextPersonalInterview.interviewers?.length} Interviewers</div>
+                  </div>
+                  <span className="material-symbols-outlined text-[#10193f]">chevron_right</span>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        )}
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="os-eyebrow">Performance Overview</div>
