@@ -58,7 +58,9 @@ const InterviewSchedule = () => {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const currentUser = getStoredUser();
-  const canScheduleInterview = ['SUPER_ADMIN', 'RECRUITER'].includes(currentUser?.role);
+  const rawRole = currentUser?.role || '';
+  const userRole = rawRole.toUpperCase().replace(/\s+/g, '_');
+  const canScheduleInterview = ['SUPER_ADMIN', 'RECRUITER'].includes(userRole);
   const recorderSupported = typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined';
 
   const loadAll = async () => {
@@ -372,6 +374,32 @@ const InterviewSchedule = () => {
     }
   };
 
+  const onDeleteInterview = async (interviewId, roundLabel) => {
+    if (!window.confirm(`Are you sure you want to delete "${roundLabel}" and all associated feedback?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/interviews/${interviewId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('ats_token')}`,
+        },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to delete interview');
+      }
+      setBanner('Interview deleted successfully.');
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'Failed to delete interview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearRecordingTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -572,8 +600,22 @@ const InterviewSchedule = () => {
                   >
                     <div className="calendar-date-num">{cell.day}</div>
                     {dayInterviews.map((item) => (
-                      <div key={item.id} className={`calendar-event result-${item.result?.toLowerCase() || 'pending'}`}>
-                        {new Date(item.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {item.application?.candidate?.fullName || 'Interview'}
+                      <div key={item.id} className={`calendar-event group/event relative result-${item.result?.toLowerCase() || 'pending'}`}>
+                        {canScheduleInterview && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteInterview(item.id, item.round || `Round ${item.roundNo}`);
+                            }}
+                            className="absolute -top-1 -right-1 z-10 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/event:opacity-100 transition-opacity text-[10px]"
+                            title="Delete Interview"
+                          >
+                            ×
+                          </button>
+                        )}
+                        <div className="truncate pr-3">
+                          {new Date(item.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {item.application?.candidate?.fullName || 'Interview'}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -614,22 +656,39 @@ const InterviewSchedule = () => {
 
             {/* Rounds Selector */}
             {selectedGroup?.interviews.length > 1 && (
-              <div className="flex bg-white rounded-xl p-1 border border-[#e4ebf1] gap-1">
-                {selectedGroup.interviews.sort((a,b) => a.roundNo - b.roundNo).map((iv) => (
-                  <button
-                    key={iv.id}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeInterviewId === iv.id ? 'bg-[#1f52cc] text-white shadow-sm' : 'text-[#7a88a3] hover:bg-gray-50'}`}
-                    onClick={() => setActiveInterviewId(iv.id)}
-                  >
-                    Round {iv.roundNo}
-                  </button>
-                ))}
+              <div className="flex bg-white rounded-xl p-1 border border-[#e4ebf1] gap-1 overflow-x-auto">
+                {selectedGroup.interviews
+                  .reduce((acc, curr) => {
+                    if (!acc.find(item => item.roundNo === curr.roundNo)) acc.push(curr);
+                    return acc;
+                  }, [])
+                  .sort((a, b) => a.roundNo - b.roundNo)
+                  .map((iv) => (
+                    <button
+                      key={iv.id}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${activeInterviewId === iv.id ? 'bg-[#1f52cc] text-white shadow-sm' : 'text-[#7a88a3] hover:bg-gray-50'}`}
+                      onClick={() => setActiveInterviewId(iv.id)}
+                    >
+                      Round {iv.roundNo}
+                    </button>
+                  ))}
               </div>
             )}
 
             <div className="os-card p-4 text-sm text-[#2a344f]">
               <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold text-[#142651]">Interview Details ({selectedInterview?.round || `Round ${selectedInterview?.roundNo}`})</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold text-[#142651]">Interview Details ({selectedInterview?.round || `Round ${selectedInterview?.roundNo}`})</div>
+                  {canScheduleInterview && (
+                    <button 
+                      onClick={() => onDeleteInterview(selectedInterview.id, selectedInterview.round || `Round ${selectedInterview.roundNo}`)}
+                      className="text-red-500 hover:text-red-700 p-1 flex items-center"
+                      title="Delete this interview"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  )}
+                </div>
                 <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                   selectedInterview?.result === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' : 
                   selectedInterview?.result === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'

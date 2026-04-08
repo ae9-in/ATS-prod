@@ -49,7 +49,9 @@ const Candidates = () => {
     isRequired: false,
   });
   const currentUser = getStoredUser();
-  const canManageCandidates = ['SUPER_ADMIN', 'RECRUITER'].includes(currentUser?.role);
+  const rawRole = currentUser?.role || '';
+  const userRole = rawRole.toUpperCase().replace(/\s+/g, '_');
+  const canManageCandidates = ['SUPER_ADMIN', 'RECRUITER'].includes(userRole);
 
   const loadCandidates = async (query = '', cat = categoryFilter) => {
     const searchParam = query.trim() ? `&search=${encodeURIComponent(query.trim())}` : '';
@@ -214,6 +216,32 @@ const Candidates = () => {
       setError(err.message || 'Failed to create custom field');
     } finally {
       setSavingCustomField(false);
+    }
+  };
+
+  const onDeleteCandidate = async (candidateId, candidateName) => {
+    if (!window.confirm(`Are you sure you want to delete ${candidateName}? This will also delete all associated applications and interviews.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/candidates/${candidateId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('ats_token')}`,
+        },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to delete candidate');
+      }
+      setBanner('Candidate deleted successfully.');
+      await loadCandidates(search, categoryFilter);
+    } catch (err) {
+      setError(err.message || 'Failed to delete candidate');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -534,8 +562,26 @@ const Candidates = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
           {visibleCandidates.map((candidate, idx) => (
             <Reveal key={candidate.id} delay={idx * 0.04}>
-              <a href={`/candidate/${candidate.id}`} className="os-card p-5 hover:shadow-lg transition-shadow duration-300 cursor-pointer block">
-                <div className="flex items-start justify-between mb-4">
+              <div className="os-card p-5 hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group">
+                <a href={`/candidate/${candidate.id}`} className="absolute inset-0 z-0"></a>
+                
+                {canManageCandidates && (
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDeleteCandidate(candidate.id, candidate.name);
+                    }}
+                    className="absolute top-4 right-4 z-10 p-2 text-[#6f7d98] hover:text-red-500 bg-white rounded-lg shadow-sm border border-[#e9eef4] opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete Candidate"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+
+                <div className="flex items-start justify-between mb-4 relative z-0">
                   {candidate.profilePhotoUrl ? (
                     <img className="w-14 h-14 rounded-xl object-cover" src={candidate.profilePhotoUrl} alt={candidate.name} />
                   ) : (
@@ -545,11 +591,11 @@ const Candidates = () => {
                   )}
                   <span className="px-2.5 py-1 bg-[#e8efff] text-[#3558ba] rounded-full text-xs font-semibold">{candidate.match}% Match</span>
                 </div>
-                <div>
+                <div className="relative z-0">
                   <h3 className="text-2xl font-semibold font-[Manrope] text-[#0f1b3d]">{candidate.name}</h3>
                   <p className="text-sm text-[#6f7d98] mt-1">{candidate.role}</p>
                 </div>
-                <div className="pt-4 mt-4 border-t border-[#e9eef4] flex items-center justify-between">
+                <div className="pt-4 mt-4 border-t border-[#e9eef4] flex items-center justify-between relative z-0">
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase tracking-[0.05em] text-[#a4acc1] leading-none">Status</span>
                     <span className="text-xs uppercase tracking-[.1em] text-[#74829e] mt-1">{candidate.status}</span>
@@ -559,7 +605,7 @@ const Candidates = () => {
                     <span className="text-xs uppercase tracking-[.1em] text-[#1f52cc] mt-1 font-semibold">{candidate.category}</span>
                   </div>
                 </div>
-              </a>
+              </div>
             </Reveal>
           ))}
 
