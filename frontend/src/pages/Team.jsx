@@ -4,7 +4,7 @@ import EnterpriseLayout, { EnterpriseSidebar, EnterpriseTopbar } from '../compon
 import { PageEnter, Reveal } from '../components/PageMotion';
 import UserChip from '../components/UserChip';
 import NotificationBell from '../components/NotificationBell';
-import { apiGet } from '../lib/api';
+import { apiGet, apiPatch } from '../lib/api';
 import { enterpriseFooterLinks, enterpriseNavItems } from '../config/enterpriseNav';
 
 const fallbackMembers = [
@@ -18,23 +18,26 @@ const Team = () => {
   const [members, setMembers] = useState(fallbackMembers);
   const [me, setMe] = useState(null);
 
+  const loadAll = async () => {
+    try {
+      const [usersRes, meRes] = await Promise.all([
+        apiGet('/users'),
+        apiGet('/auth/me')
+      ]);
+      setMe(meRes.data || null);
+      if (Array.isArray(usersRes.data) && usersRes.data.length > 0) {
+        setMembers(usersRes.data);
+      }
+    } catch (_) {
+      // Recruiters/interviewers may not have permission for users endpoint.
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
-      try {
-        const [usersRes, meRes] = await Promise.all([
-          apiGet('/users'),
-          apiGet('/auth/me')
-        ]);
-        if (!mounted) return;
-        setMe(meRes.data || null);
-        if (Array.isArray(usersRes.data) && usersRes.data.length > 0) {
-          setMembers(usersRes.data);
-        }
-      } catch (_) {
-        // Recruiters/interviewers may not have permission for users endpoint.
-      }
+      await loadAll();
     };
 
     load();
@@ -42,6 +45,15 @@ const Team = () => {
       mounted = false;
     };
   }, []);
+
+  const onApproveUser = async (user) => {
+    try {
+      await apiPatch(`/users/${user.id}/status`, { status: 'ACTIVE' });
+      await loadAll();
+    } catch (err) {
+      alert(err.message || 'Failed to approve user');
+    }
+  };
 
   return (
     <EnterpriseLayout
@@ -82,7 +94,10 @@ const Team = () => {
                 )}
                 <h3 className="text-xl font-semibold font-[Manrope] mt-4">{member.fullName}</h3>
                 <p className="text-xs uppercase tracking-[.1em] text-[#8391ab] mt-1">{String(member.role || 'USER').replace('_', ' ')}</p>
-                <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#6f7d98]"><span className={`h-2 w-2 rounded-full ${member.status === 'ACTIVE' ? 'bg-[#2fb56f]' : 'bg-[#a6b1c8]'}`} />{member.status || 'ACTIVE'}</div>
+                <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#6f7d98]">
+                  <span className={`h-2 w-2 rounded-full ${member.status === 'ACTIVE' ? 'bg-[#2fb56f]' : member.status === 'PENDING' ? 'bg-[#f2994a]' : 'bg-[#a6b1c8]'}`} />
+                  {member.status || 'ACTIVE'}
+                </div>
                 <div className="mt-4 pt-4 border-t border-[#e9eef4] flex justify-center gap-2">
                   <button className="os-btn-outline !h-9 !px-3" type="button" onClick={() => { window.location.href = `mailto:${member.email || ''}`; }}>
                     <span className="material-symbols-outlined text-base">mail</span>
@@ -90,6 +105,11 @@ const Team = () => {
                   <button className="os-btn-outline !h-9 !px-3" type="button" onClick={() => { if (member.phone) window.location.href = `tel:${member.phone}`; }}>
                     <span className="material-symbols-outlined text-base">call</span>
                   </button>
+                  {me?.role === 'SUPER_ADMIN' && member.status === 'PENDING' && (
+                    <button className="os-btn-primary !h-9 !px-3 font-bold" type="button" onClick={() => onApproveUser(member)}>
+                      Approve
+                    </button>
+                  )}
                 </div>
               </div>
             </Reveal>

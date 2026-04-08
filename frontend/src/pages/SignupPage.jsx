@@ -66,8 +66,9 @@ const SignupPage = () => {
         throw new Error(result?.message || 'Signup failed');
       }
 
-      setSuccess('Registration successful. Redirecting to login...');
-      setTimeout(() => navigate('/login'), 1100);
+      setSuccess('Registration successful! Your account is pending administrator approval. You will receive an email once activated.');
+      // Keep them on the page for a few seconds so they read the strong message
+      setTimeout(() => navigate('/login'), 5000);
     } catch (err) {
       setError(err.message || 'Signup failed. Please try again.');
     } finally {
@@ -193,7 +194,7 @@ const SignupPage = () => {
                   value={form.password}
                   onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                 />
-                <span 
+                <span
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7b86a1] cursor-pointer select-none"
                   onClick={() => setShowPassword(!showPassword)}
                 >

@@ -508,7 +508,8 @@ const Pipeline = () => {
                                   ))}
                                 </div>
                               </div>
-                            ) : null}
+                            );
+                          })()}
                         </div>
                       ))}
                       {column.items.length === 0 ? <div className="text-xs os-muted">No applications.</div> : null}
