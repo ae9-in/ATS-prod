@@ -162,28 +162,28 @@ const Dashboard = () => {
       { label: 'Interviewer Activity', value: activeRecruiters, tag: 'Coverage', href: '/team' },
     ].slice(0, 4);
   }, [applications, candidatesTotal, currentUser, interviews, jobsTotal, usersTotal]);
-165: 
-166:   const nextPersonalInterview = useMemo(() => {
-167:     if (!interviews.length) return null;
-168:     const now = new Date();
-169:     const upcoming = interviews
-170:       .filter((iv) => {
-171:         const start = new Date(iv.scheduledStart);
-172:         const isAssigned = iv.interviewers?.some((u) => u.id === currentUser?.id);
-173:         return isAssigned && start > now && !iv.mandatoryFeedbackSubmitted;
-174:       })
-175:       .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
-176: 
-177:     return upcoming[0] || null;
-178:   }, [interviews, currentUser?.id]);
-179: 
-180:   const isInterviewSoon = useMemo(() => {
-181:     if (!nextPersonalInterview) return false;
-182:     const start = new Date(nextPersonalInterview.scheduledStart);
-183:     const now = new Date();
-184:     const diffMs = start - now;
-185:     return diffMs > 0 && diffMs < 1000 * 60 * 60; // Less than 1 hour
-186:   }, [nextPersonalInterview]);
+
+  const nextPersonalInterview = useMemo(() => {
+    if (!interviews.length) return null;
+    const now = new Date();
+    const upcoming = interviews
+      .filter((iv) => {
+        const start = new Date(iv.scheduledStart);
+        const isAssigned = iv.interviewers?.some((u) => u.id === currentUser?.id);
+        return isAssigned && start > now && !iv.mandatoryFeedbackSubmitted;
+      })
+      .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
+
+    return upcoming[0] || null;
+  }, [interviews, currentUser?.id]);
+
+  const isInterviewSoon = useMemo(() => {
+    if (!nextPersonalInterview) return false;
+    const start = new Date(nextPersonalInterview.scheduledStart);
+    const now = new Date();
+    const diffMs = start - now;
+    return diffMs > 0 && diffMs < 1000 * 60 * 60; // Less than 1 hour
+  }, [nextPersonalInterview]);
 
   return (
     <EnterpriseLayout
