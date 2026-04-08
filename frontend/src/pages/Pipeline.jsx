@@ -476,16 +476,16 @@ const Pipeline = () => {
                                 <div className="os-btn-outline !h-9 flex-1 !justify-center !cursor-default">Read Only</div>
                               )}
                               <button className="os-btn-outline !h-9 flex-1" type="button" onClick={() => onLoadHistory(app.id)}>
-                                History
+                                Refresh
                               </button>
                             </div>
                           </div>
 
-                          {(historyByApp[app.id] || []).length > 0 ? (
+                          {(historyByApp[app.id] || app.pipelineEvents || []).length > 0 ? (
                             <div className="mt-4 border-t border-[#edf1f6] pt-3">
                               <div className="text-[10px] uppercase tracking-widest font-bold text-[#8b95ad] mb-2 px-1">Journey History</div>
                               <div className="space-y-3 max-h-[160px] overflow-y-auto px-1 pr-2 thin-scrollbar">
-                                {historyByApp[app.id].map((item, hIdx) => (
+                                {(historyByApp[app.id] || app.pipelineEvents || []).map((item, hIdx) => (
                                   <div key={hIdx} className="relative pl-3 before:absolute before:left-0 before:top-1.5 before:bottom-0 before:w-0.5 before:bg-[#e2e8f0]">
                                     <div className="text-[10px] font-bold text-[#1f52cc]">
                                       {item.toStage?.name || 'Next Stage'}
