@@ -481,27 +481,34 @@ const Pipeline = () => {
                             </div>
                           </div>
 
-                          {(historyByApp[app.id] || app.pipelineEvents || []).length > 0 ? (
-                            <div className="mt-4 border-t border-[#edf1f6] pt-3">
-                              <div className="text-[10px] uppercase tracking-widest font-bold text-[#8b95ad] mb-2 px-1">Journey History</div>
-                              <div className="space-y-3 max-h-[160px] overflow-y-auto px-1 pr-2 thin-scrollbar">
-                                {(historyByApp[app.id] || app.pipelineEvents || []).map((item, hIdx) => (
-                                  <div key={hIdx} className="relative pl-3 before:absolute before:left-0 before:top-1.5 before:bottom-0 before:w-0.5 before:bg-[#e2e8f0]">
-                                    <div className="text-[10px] font-bold text-[#1f52cc]">
-                                      {item.toStage?.name || 'Next Stage'}
+                          {(() => {
+                            const displayHistory = (historyByApp[app.id] && historyByApp[app.id].length > 0)
+                              ? historyByApp[app.id]
+                              : (app.pipelineEvents || []);
+
+                            if (displayHistory.length === 0) return null;
+
+                            return (
+                              <div className="mt-4 border-t border-[#edf1f6] pt-3">
+                                <div className="text-[10px] uppercase tracking-widest font-bold text-[#8b95ad] mb-2 px-1">Journey History</div>
+                                <div className="space-y-3 max-h-[160px] overflow-y-auto px-1 pr-2 thin-scrollbar">
+                                  {displayHistory.map((item, hIdx) => (
+                                    <div key={hIdx} className="relative pl-3 before:absolute before:left-0 before:top-1.5 before:bottom-0 before:w-0.5 before:bg-[#e2e8f0]">
+                                      <div className="text-[10px] font-bold text-[#1f52cc]">
+                                        {item.toStage?.name || 'Next Stage'}
+                                      </div>
+                                      <div className="text-[10px] text-[#5e6a85] mt-1 leading-relaxed">
+                                        {item.remark || 'No remark provided'}
+                                      </div>
+                                      <div className="text-[9px] text-[#abb5cc] mt-1 flex justify-between">
+                                        <span>{item.movedBy?.fullName || 'System'}</span>
+                                        <span>{new Date(item.movedAt || item.at).toLocaleDateString()}</span>
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-[#5e6a85] mt-1 leading-relaxed">
-                                      {item.remark || 'No remark provided'}
-                                    </div>
-                                    <div className="text-[9px] text-[#abb5cc] mt-1 flex justify-between">
-                                      <span>{item.movedBy?.fullName || 'System'}</span>
-                                      <span>{new Date(item.movedAt || item.at).toLocaleDateString()}</span>
-                                    </div>
-                                  </div>
-                                ))}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ) : null}
+                            ) : null}
                         </div>
                       ))}
                       {column.items.length === 0 ? <div className="text-xs os-muted">No applications.</div> : null}
