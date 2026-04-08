@@ -202,6 +202,7 @@ const Pipeline = () => {
         return next;
       });
       await loadAll();
+      await onLoadHistory(applicationId); // Refresh visible history immediately
       setBanner('Application moved successfully.');
     } catch (err) {
       setError(err.message || 'Failed to move pipeline stage');

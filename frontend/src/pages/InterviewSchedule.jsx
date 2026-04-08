@@ -110,17 +110,17 @@ const InterviewSchedule = () => {
       mounted = false;
     };
   }, []);
- 
+
   const downloadDailyPdf = async () => {
     try {
       const start = new Date(viewDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(viewDate);
       end.setHours(23, 59, 59, 999);
-      
+
       const startISO = start.toISOString();
       const endISO = end.toISOString();
-      
+
       // Standardize date for filename (YYYY-MM-DD)
       const year = start.getFullYear();
       const month = String(start.getMonth() + 1).padStart(2, '0');
@@ -128,7 +128,7 @@ const InterviewSchedule = () => {
       const dateStr = `${year}-${month}-${day}`;
 
       const path = `/reports/export?report=dailyinterviews&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&date=${encodeURIComponent(dateStr)}`;
-      
+
       const blob = await apiGetBlob(path);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -138,20 +138,20 @@ const InterviewSchedule = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       setBanner(`Interviews for ${dateStr} export started.`);
     } catch (err) {
       setError(err.message || 'Failed to start download');
     }
   };
- 
+
   const calendarDays = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const prevMonthDays = new Date(year, month, 0).getDate();
- 
+
     const days = [];
     const offset = firstDay === 0 ? 6 : firstDay - 1; // Mon-Sun
     for (let i = offset; i > 0; i -= 1) {
@@ -186,7 +186,7 @@ const InterviewSchedule = () => {
       }
     });
     // Return sorted by latest interview date
-    return Array.from(map.values()).sort((a, b) => 
+    return Array.from(map.values()).sort((a, b) =>
       new Date(b.latestInterview.scheduledStart) - new Date(a.latestInterview.scheduledStart)
     );
   }, [interviews]);
@@ -199,7 +199,7 @@ const InterviewSchedule = () => {
 
   const selectedCandidate = selectedGroup?.application?.candidate;
   const latestInterview = selectedGroup?.latestInterview;
-  
+
   // For the individual interview context (e.g. feedback submission), default to latest
   const [activeInterviewId, setActiveInterviewId] = useState('');
   useEffect(() => {
@@ -262,11 +262,11 @@ const InterviewSchedule = () => {
 
     try {
       setSavingSchedule(true);
-      
+
       let targetApplicationId = '';
       // Find if an application already exists for this candidate + job
       const existingApp = applications.find(a => a.candidateId === scheduleForm.candidateId && a.jobId === scheduleForm.jobId);
-      
+
       if (existingApp) {
         targetApplicationId = existingApp.id;
       } else {
@@ -533,45 +533,45 @@ const InterviewSchedule = () => {
       </div>
       <PageEnter className={`grid grid-cols-1 ${viewMode === 'list' ? 'lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr_320px]' : 'lg:grid-cols-1'} h-[calc(100vh-126px)] overflow-hidden`}>
         {viewMode === 'list' && (
-        <Reveal className="bg-white border-r border-[#e4ebf1] p-4 overflow-auto max-h-[42vh] lg:max-h-none">
-          <div className="flex items-center justify-between pb-4">
-            <h2 className="text-2xl font-semibold font-[Manrope] px-2">Interviews</h2>
-            {loading ? <div className="text-xs text-[#a1acbd] animate-pulse">Syncing...</div> : null}
-          </div>
-          {groupedApplications.map((group) => {
-            const candidate = group.application?.candidate;
-            const appId = group.application?.id;
-            return (
-              <button
-                key={appId}
-                className={`w-full text-left flex gap-3 p-3 rounded-xl mb-1 ${selectedGroupId === appId ? 'bg-[#eef3ff] border-l-4 border-[#1f4bc6]' : 'hover:bg-[#f6f9fc]'}`}
-                onClick={() => {
-                  setSelectedId(appId);
-                  setActiveInterviewId(group.latestInterview.id);
-                }}
-                type="button"
-              >
-                {candidate?.profilePhotoFile?.storageKey ? (
-                  <img className="w-10 h-10 rounded-full object-cover" src={candidate.profilePhotoFile.storageKey} alt={candidate?.fullName || 'candidate'} />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    {(candidate?.fullName || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+          <Reveal className="bg-white border-r border-[#e4ebf1] p-4 overflow-auto max-h-[42vh] lg:max-h-none">
+            <div className="flex items-center justify-between pb-4">
+              <h2 className="text-2xl font-semibold font-[Manrope] px-2">Interviews</h2>
+              {loading ? <div className="text-xs text-[#a1acbd] animate-pulse">Syncing...</div> : null}
+            </div>
+            {groupedApplications.map((group) => {
+              const candidate = group.application?.candidate;
+              const appId = group.application?.id;
+              return (
+                <button
+                  key={appId}
+                  className={`w-full text-left flex gap-3 p-3 rounded-xl mb-1 ${selectedGroupId === appId ? 'bg-[#eef3ff] border-l-4 border-[#1f4bc6]' : 'hover:bg-[#f6f9fc]'}`}
+                  onClick={() => {
+                    setSelectedId(appId);
+                    setActiveInterviewId(group.latestInterview.id);
+                  }}
+                  type="button"
+                >
+                  {candidate?.profilePhotoFile?.storageKey ? (
+                    <img className="w-10 h-10 rounded-full object-cover" src={candidate.profilePhotoFile.storageKey} alt={candidate?.fullName || 'candidate'} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#1f52cc] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      {(candidate?.fullName || 'C').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 1)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{candidate?.fullName || 'Candidate'}</div>
+                    <div className="text-xs text-[#6f7894] truncate">{group.application?.job?.title || 'Applied Role'}</div>
+                    <div className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded inline-block mt-1">
+                      {group.interviews.length} {group.interviews.length === 1 ? 'Round' : 'Rounds'}
+                    </div>
                   </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{candidate?.fullName || 'Candidate'}</div>
-                  <div className="text-xs text-[#6f7894] truncate">{group.application?.job?.title || 'Applied Role'}</div>
-                  <div className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded inline-block mt-1">
-                    {group.interviews.length} {group.interviews.length === 1 ? 'Round' : 'Rounds'}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-          {interviews.length === 0 ? <div className="text-sm os-muted px-2">No interviews found.</div> : null}
-        </Reveal>
+                </button>
+              );
+            })}
+            {interviews.length === 0 ? <div className="text-sm os-muted px-2">No interviews found.</div> : null}
+          </Reveal>
         )}
- 
+
         {viewMode === 'calendar' ? (
           <Reveal delay={0.06} className="bg-white p-6 overflow-auto lg:col-span-2 xl:col-span-3">
             <div className="calendar-grid">
@@ -585,7 +585,7 @@ const InterviewSchedule = () => {
                 });
                 const isToday = new Date().toDateString() === cell.date.toDateString();
                 const isOtherMonth = cell.month !== 'current';
- 
+
                 return (
                   <div
                     key={`${cell.month}-${cell.day}-${idx}`}
@@ -601,7 +601,7 @@ const InterviewSchedule = () => {
                     {dayInterviews.map((item) => (
                       <div key={item.id} className={`calendar-event group/event relative result-${item.result?.toLowerCase() || 'pending'}`}>
                         {canScheduleInterview && (
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onDeleteInterview(item.id, item.round || `Round ${item.roundNo}`);
@@ -625,344 +625,342 @@ const InterviewSchedule = () => {
         ) : (
           <>
 
-        <Reveal delay={0.04} className="bg-[#eef3f3] border-r border-[#e4ebf1] flex flex-col overflow-auto max-h-[58vh] lg:max-h-none">
-          <div className="h-16 bg-white border-b border-[#e4ebf1] px-5 flex items-center justify-between">
-            <div className="flex gap-3 items-center min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#b7c7f2] text-[#2f4ea8] text-sm font-semibold flex items-center justify-center">
-                {(selectedCandidate?.fullName || 'C').slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xl font-semibold font-[Manrope] truncate">{selectedCandidate?.fullName || (loading ? 'Loading...' : 'Candidate')}</div>
-                <div className={selectedInterview ? 'text-[#2ca764] text-xs' : 'text-[#8c97ad] text-xs'}>{selectedInterview ? 'Interview Active' : 'No active interview'}</div>
-              </div>
-            </div>
-            <div className="text-[#6d7893] flex gap-3">
-              <button className="os-icon-btn !h-8 !w-8" type="button" onClick={openMeetingLink}>
-                <span className="material-symbols-outlined">videocam</span>
-              </button>
-              <button className="os-icon-btn !h-8 !w-8" type="button" onClick={callCandidate}>
-                <span className="material-symbols-outlined">call</span>
-              </button>
-              <button className="os-icon-btn !h-8 !w-8" type="button" onClick={() => setBanner('More actions are available in quick actions panel.')}>
-                <span className="material-symbols-outlined">more_vert</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-4">
-            {error ? <div className="os-card p-3 text-xs text-red-600">{error}</div> : null}
-            {banner ? <div className="os-card p-3 text-xs text-[#2454cf]">{banner}</div> : null}
-
-            {/* Rounds Selector */}
-            {selectedGroup?.interviews.length > 1 && (
-              <div className="flex bg-white rounded-xl p-1 border border-[#e4ebf1] gap-1 overflow-x-auto">
-                {selectedGroup.interviews
-                  .reduce((acc, curr) => {
-                    if (!acc.find(item => item.roundNo === curr.roundNo)) acc.push(curr);
-                    return acc;
-                  }, [])
-                  .sort((a, b) => a.roundNo - b.roundNo)
-                  .map((iv) => (
-                    <button
-                      key={iv.id}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${activeInterviewId === iv.id ? 'bg-[#1f52cc] text-white shadow-sm' : 'text-[#7a88a3] hover:bg-gray-50'}`}
-                      onClick={() => setActiveInterviewId(iv.id)}
-                    >
-                      Round {iv.roundNo}
-                    </button>
-                  ))}
-              </div>
-            )}
-
-            <div className="os-card p-4 text-sm text-[#2a344f]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-[#142651]">Interview Details ({selectedInterview?.round || `Round ${selectedInterview?.roundNo}`})</div>
-                  {canScheduleInterview && (
-                    <button 
-                      onClick={() => onDeleteInterview(selectedInterview.id, selectedInterview.round || `Round ${selectedInterview.roundNo}`)}
-                      className="text-red-500 hover:text-red-700 p-1 flex items-center"
-                      title="Delete this interview"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                  )}
-                </div>
-                <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  selectedInterview?.result === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' : 
-                  selectedInterview?.result === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
-                }`}>
-                  {selectedInterview?.result || 'PENDING'}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-y-1 text-xs sm:text-sm">
-                <div className="text-[#6d7893]">Role:</div> <div>{selectedInterview?.application?.job?.title || '-'}</div>
-                <div className="text-[#6d7893]">Interviewers:</div> <div>{selectedInterview?.interviewers?.map(u => u.fullName).join(', ') || '-'}</div>
-                <div className="text-[#6d7893]">Mode:</div> <div>{selectedInterview?.mode || '-'}</div>
-                <div className="text-[#6d7893]">Date:</div> <div>{selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
-              </div>
-              {selectedInterview?.voiceRecordingFile?.storageKey ? (
-                <a 
-                  className="text-[#1f4bc6] inline-block mt-3 bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold border border-blue-100" 
-                  href={selectedInterview.voiceRecordingFile.storageKey?.startsWith('http')
-                    ? selectedInterview.voiceRecordingFile.storageKey
-                    : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${selectedInterview.voiceRecordingFile.storageKey}`
-                  } 
-                  target="_blank" 
-                  rel="noreferrer"
-                >
-                  <span className="material-symbols-outlined align-middle mr-1 text-sm">play_circle</span>
-                  Listen Recording: {selectedInterview.voiceRecordingFile.originalName}
-                </a>
-              ) : null}
-            </div>
-
-            {/* Candidate Journey Timeline */}
-            <div className="os-card p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="font-semibold text-[#142651]">Full Journey History</div>
-                {loadingHistory && <div className="text-[10px] text-blue-500 animate-pulse">Syncing...</div>}
-              </div>
-              <div className="space-y-4 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#e4ebf1]">
-                {candidateHistory.length === 0 && !loadingHistory && (
-                  <div className="text-xs text-[#a1acbd] pl-8">No journey records found.</div>
-                )}
-                {candidateHistory.map((event, idx) => (
-                  <div key={idx} className="relative pl-10">
-                    <div className={`absolute left-0 top-1 w-9 h-9 rounded-full border-4 border-white flex items-center justify-center ${
-                      event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'bg-[#2ca764] text-white' : 
-                      event.type === 'INTERVIEW_SCHEDULED' ? 'bg-[#1f52cc] text-white' : 'bg-[#a1acbd] text-white'
-                    }`}>
-                      <span className="material-symbols-outlined text-sm">
-                        {event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'check_circle' : 
-                         event.type === 'INTERVIEW_SCHEDULED' ? 'event' : 'info'}
-                      </span>
-                    </div>
-                    <div className="text-sm font-semibold text-[#142651]">
-                      {event.type === 'INTERVIEW_SCHEDULED' ? `Interview Round ${event.roundNo} Scheduled` : 
-                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `Feedback Submitted by ${event.submittedBy?.fullName || 'Interviewer'}: Assessment Result - ${event.recommendation}` : 
-                       event.type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
-                    </div>
-                    <div className="text-[11px] text-[#6f7894] mb-1">
-                      {new Date(event.at).toLocaleString()}
-                    </div>
-                    {event.remark && (
-                      <div className="text-xs text-[#5e6a85] bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        {event.remark}
-                      </div>
-                    )}
+            <Reveal delay={0.04} className="bg-[#eef3f3] border-r border-[#e4ebf1] flex flex-col overflow-auto max-h-[58vh] lg:max-h-none">
+              <div className="h-16 bg-white border-b border-[#e4ebf1] px-5 flex items-center justify-between">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#b7c7f2] text-[#2f4ea8] text-sm font-semibold flex items-center justify-center">
+                    {(selectedCandidate?.fullName || 'C').slice(0, 2).toUpperCase()}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Multiple Feedback Display */}
-            {selectedFeedbacks.length > 0 && (
-              <div className="space-y-3">
-                <div className="text-xs font-bold uppercase text-[#8b95ad] tracking-wider ml-1">Interviewer Assessments ({selectedFeedbacks.length})</div>
-                {selectedFeedbacks.map((f) => (
-                  <div key={f.id} className="os-card p-4 transition-all hover:shadow-md border-l-4 border-[#2ca764]">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[#eef3ff] flex items-center justify-center text-[10px] font-bold text-[#1f52cc]">
-                          {(f.submittedBy?.fullName || 'U').split(' ').map(n=>n[0]).join('')}
-                        </div>
-                        <div className="text-sm font-medium text-[#142651]">{f.submittedBy?.fullName}</div>
-                      </div>
-                      <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        f.recommendation === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' : 
-                        f.recommendation === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
-                      }`}>
-                        {f.recommendation}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Technical Proficiency</div>
-                        <div className="text-xs font-bold text-[#142651]">{f.technicalRating} / 5</div>
-                      </div>
-                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Communication Skills</div>
-                        <div className="text-xs font-bold text-[#142651]">{f.communicationRating} / 5</div>
-                      </div>
-                      <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Cultural Fit</div>
-                        <div className="text-xs font-bold text-[#142651]">{f.cultureFitRating} / 5</div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="text-xs">
-                        <span className="font-semibold text-[#142651]">Strengths:</span>
-                        <span className="text-[#5e6a85] ml-1">{f.strengths}</span>
-                      </div>
-                      <div className="text-xs">
-                        <span className="font-semibold text-[#142651]">Comments:</span>
-                        <p className="text-[#5e6a85] mt-1 italic text-[13px]">"{f.overallComments}"</p>
-                      </div>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xl font-semibold font-[Manrope] truncate">{selectedCandidate?.fullName || (loading ? 'Loading...' : 'Candidate')}</div>
+                    <div className={selectedInterview ? 'text-[#2ca764] text-xs' : 'text-[#8c97ad] text-xs'}>{selectedInterview ? 'Interview Active' : 'No active interview'}</div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.08} className="bg-[#f8fbfb] p-4 overflow-auto border-t lg:border-t-0 border-[#e4ebf1]">
-          <div className="os-eyebrow">Quick Actions</div>
-
-          {canScheduleInterview ? (
-            <form className="os-card p-4 mt-2" onSubmit={onScheduleSubmit}>
-              <div className="text-sm font-semibold text-[#142651] mb-3">Schedule Interview</div>
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Candidate</div>
-                <select 
-                  className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" 
-                  value={scheduleForm.candidateId} 
-                  onChange={(event) => {
-                    const cId = event.target.value;
-                    setScheduleForm((prev) => {
-                      // If candidate already has an application, pre-fill the job if possible
-                      const existing = applications.find(a => a.candidateId === cId);
-                      return { ...prev, candidateId: cId, jobId: existing?.jobId || prev.jobId };
-                    });
-                  }} 
-                  required
-                >
-                  <option value="">Choose candidate...</option>
-                  {candidates.map((c) => (
-                    <option key={c.id} value={c.id}>{c.fullName} {c.email ? `(${c.email})` : ''}</option>
-                  ))}
-                </select>
-
-                <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Job</div>
-                <select 
-                  className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" 
-                  value={scheduleForm.jobId} 
-                  onChange={(event) => setScheduleForm((prev) => ({ ...prev, jobId: event.target.value }))} 
-                  required
-                >
-                  <option value="">Choose job role...</option>
-                  {jobs.map((j) => (
-                    <option key={j.id} value={j.id}>{j.title}</option>
-                  ))}
-                </select>
-
-                <div className="text-xs font-semibold text-[#6d7893] mt-1">Select Interviewers / Recruiters (Multiple)</div>
-                <div className="max-h-32 overflow-y-auto border border-[#dbe4ee] rounded-lg p-2 space-y-1 bg-white">
-                  {interviewers.map((person) => (
-                    <label key={person.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
-                      <input 
-                        type="checkbox" 
-                        checked={scheduleForm.interviewerIds.includes(person.id)}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setScheduleForm(prev => {
-                            const newIds = checked 
-                              ? [...prev.interviewerIds, person.id]
-                              : prev.interviewerIds.filter(id => id !== person.id);
-                            return { ...prev, interviewerIds: newIds };
-                          });
-                        }}
-                      />
-                      <span className="text-xs text-[#2a344f]">{person.fullName} <span className="os-muted text-[10px]">({person.role})</span></span>
-                    </label>
-                  ))}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.round} onChange={(event) => setScheduleForm((prev) => ({ ...prev, round: event.target.value }))}>
-                    <option value="Round 1">Round 1</option>
-                    <option value="Round 2">Round 2</option>
-                    <option value="Formal HR Round">Formal HR Round</option>
-                  </select>
-                  <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.mode} onChange={(event) => setScheduleForm((prev) => ({ ...prev, mode: event.target.value }))}>
-                    <option value="ONLINE">ONLINE</option>
-                    <option value="OFFLINE">OFFLINE</option>
-                    <option value="PHONE">PHONE</option>
-                  </select>
-                </div>
-                <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" type="datetime-local" value={scheduleForm.scheduledStart} onChange={(event) => setScheduleForm((prev) => ({ ...prev, scheduledStart: event.target.value }))} required />
-                <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" type="datetime-local" value={scheduleForm.scheduledEnd} onChange={(event) => setScheduleForm((prev) => ({ ...prev, scheduledEnd: event.target.value }))} />
-                <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" placeholder="Meeting link (optional)" value={scheduleForm.meetingLink} onChange={(event) => setScheduleForm((prev) => ({ ...prev, meetingLink: event.target.value }))} />
-              </div>
-              <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingSchedule}>
-                {savingSchedule ? 'Scheduling...' : 'Schedule'}
-              </button>
-            </form>
-          ) : null}
-
-          <form className="os-card p-4 mt-3" onSubmit={onFeedbackSubmit}>
-            <div className="text-sm font-semibold text-[#142651] mb-3">Submit Feedback</div>
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 gap-1">
-                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Technical Skills (1-5)</label>
-                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.technicalRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, technicalRating: event.target.value }))} />
-              </div>
-              <div className="grid grid-cols-1 gap-1">
-                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Communication (1-5)</label>
-                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.communicationRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, communicationRating: event.target.value }))} />
-              </div>
-              <div className="grid grid-cols-1 gap-1">
-                <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Culture Fit (1-5)</label>
-                <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.cultureFitRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, cultureFitRating: event.target.value }))} />
-              </div>
-            </div>
-            <textarea className="mt-3 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Key Strengths..." value={feedbackForm.strengths} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, strengths: event.target.value }))} required />
-            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Potential Concerns..." value={feedbackForm.concerns} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, concerns: event.target.value }))} required />
-            <select className="mt-2 h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={feedbackForm.recommendation} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, recommendation: event.target.value }))}>
-              <option value="PASS">PASS</option>
-              <option value="OFFER">OFFER (Move to Selected)</option>
-              <option value="FAIL">FAIL</option>
-              <option value="HOLD">HOLD</option>
-              <option value="PENDING">PENDING</option>
-            </select>
-            <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Overall Decision Comments..." value={feedbackForm.overallComments} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, overallComments: event.target.value }))} required />
-            <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingFeedback || !selectedInterview || Boolean(myFeedback)}>
-              {myFeedback ? 'You have submitted feedback' : savingFeedback ? 'Submitting...' : 'Submit Feedback'}
-            </button>
-          </form>
-
-          <div className="os-card p-4 mt-3">
-            <div className="text-sm font-semibold text-[#142651] mb-3">Upload Voice Recording</div>
-            {recorderSupported ? (
-              <div className="rounded-lg border border-[#dbe4ee] bg-[#f7faff] p-3 mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-[#5f6a84]">In-browser Recorder</div>
-                  <div className="text-xs font-semibold text-[#1f4bc6]">{Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:{(recordingSeconds % 60).toString().padStart(2, '0')}</div>
-                </div>
-                <div className="flex gap-2">
-                  {!isRecording ? (
-                    <button className="os-btn-primary !h-9 flex-1" type="button" onClick={startBrowserRecording}>Start Recording</button>
-                  ) : (
-                    <button className="os-btn-outline !h-9 flex-1" type="button" onClick={stopBrowserRecording}>Stop Recording</button>
-                  )}
-                  <button
-                    className="os-btn-outline !h-9"
-                    type="button"
-                    onClick={() => {
-                      setRecordedBlob(null);
-                      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-                      setRecordedUrl('');
-                      setRecordingSeconds(0);
-                    }}
-                    disabled={!recordedBlob}
-                  >
-                    Clear
+                <div className="text-[#6d7893] flex gap-3">
+                  <button className="os-icon-btn !h-8 !w-8" type="button" onClick={openMeetingLink}>
+                    <span className="material-symbols-outlined">videocam</span>
+                  </button>
+                  <button className="os-icon-btn !h-8 !w-8" type="button" onClick={callCandidate}>
+                    <span className="material-symbols-outlined">call</span>
+                  </button>
+                  <button className="os-icon-btn !h-8 !w-8" type="button" onClick={() => setBanner('More actions are available in quick actions panel.')}>
+                    <span className="material-symbols-outlined">more_vert</span>
                   </button>
                 </div>
-                {recordedUrl ? (
-                  <audio controls className="w-full mt-2">
-                    <source src={recordedUrl} type="audio/webm" />
-                  </audio>
-                ) : null}
               </div>
-            ) : null}
-            <input className="os-file-input" type="file" accept="audio/*" onChange={(event) => setRecordingFile(event.target.files?.[0] || null)} />
-            <button className="os-btn-outline w-full mt-3" type="button" onClick={onUploadRecording} disabled={uploadingRecording}>
-              {uploadingRecording ? 'Uploading...' : 'Upload Recording'}
-            </button>
-          </div>
-        </Reveal>
-        </>
+
+              <div className="p-6 space-y-4">
+                {error ? <div className="os-card p-3 text-xs text-red-600">{error}</div> : null}
+                {banner ? <div className="os-card p-3 text-xs text-[#2454cf]">{banner}</div> : null}
+
+                {/* Rounds Selector */}
+                {selectedGroup?.interviews.length > 1 && (
+                  <div className="flex bg-white rounded-xl p-1 border border-[#e4ebf1] gap-1 overflow-x-auto">
+                    {selectedGroup.interviews
+                      .reduce((acc, curr) => {
+                        if (!acc.find(item => item.roundNo === curr.roundNo)) acc.push(curr);
+                        return acc;
+                      }, [])
+                      .sort((a, b) => a.roundNo - b.roundNo)
+                      .map((iv) => (
+                        <button
+                          key={iv.id}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${activeInterviewId === iv.id ? 'bg-[#1f52cc] text-white shadow-sm' : 'text-[#7a88a3] hover:bg-gray-50'}`}
+                          onClick={() => setActiveInterviewId(iv.id)}
+                        >
+                          Round {iv.roundNo}
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                <div className="os-card p-4 text-sm text-[#2a344f]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-[#142651]">Interview Details ({selectedInterview?.round || `Round ${selectedInterview?.roundNo}`})</div>
+                      {canScheduleInterview && (
+                        <button
+                          onClick={() => onDeleteInterview(selectedInterview.id, selectedInterview.round || `Round ${selectedInterview.roundNo}`)}
+                          className="text-red-500 hover:text-red-700 p-1 flex items-center"
+                          title="Delete this interview"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${selectedInterview?.result === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' :
+                        selectedInterview?.result === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
+                      }`}>
+                      {selectedInterview?.result || 'PENDING'}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-1 text-xs sm:text-sm">
+                    <div className="text-[#6d7893]">Role:</div> <div>{selectedInterview?.application?.job?.title || '-'}</div>
+                    <div className="text-[#6d7893]">Interviewers:</div> <div>{selectedInterview?.interviewers?.map(u => u.fullName).join(', ') || '-'}</div>
+                    <div className="text-[#6d7893]">Mode:</div> <div>{selectedInterview?.mode || '-'}</div>
+                    <div className="text-[#6d7893]">Date:</div> <div>{selectedInterview?.scheduledStart ? new Date(selectedInterview.scheduledStart).toLocaleString() : '-'}</div>
+                  </div>
+                  {selectedInterview?.voiceRecordingFile?.storageKey ? (
+                    <a
+                      className="text-[#1f4bc6] inline-block mt-3 bg-blue-50 px-3 py-2 rounded-lg text-xs font-semibold border border-blue-100"
+                      href={selectedInterview.voiceRecordingFile.storageKey?.startsWith('http')
+                        ? selectedInterview.voiceRecordingFile.storageKey
+                        : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${selectedInterview.voiceRecordingFile.storageKey}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="material-symbols-outlined align-middle mr-1 text-sm">play_circle</span>
+                      Listen Recording: {selectedInterview.voiceRecordingFile.originalName}
+                    </a>
+                  ) : null}
+                </div>
+
+                {/* Candidate Journey Timeline */}
+                <div className="os-card p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="font-semibold text-[#142651]">Full Journey History</div>
+                    {loadingHistory && <div className="text-[10px] text-blue-500 animate-pulse">Syncing...</div>}
+                  </div>
+                  <div className="space-y-4 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#e4ebf1]">
+                    {candidateHistory.length === 0 && !loadingHistory && (
+                      <div className="text-xs text-[#a1acbd] pl-8">No journey records found.</div>
+                    )}
+                    {candidateHistory.map((event, idx) => (
+                      <div key={idx} className="relative pl-10">
+                        <div className={`absolute left-0 top-1 w-9 h-9 rounded-full border-4 border-white flex items-center justify-center ${event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'bg-[#2ca764] text-white' :
+                            event.type === 'INTERVIEW_SCHEDULED' ? 'bg-[#1f52cc] text-white' : 'bg-[#a1acbd] text-white'
+                          }`}>
+                          <span className="material-symbols-outlined text-sm">
+                            {event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? 'check_circle' :
+                              event.type === 'INTERVIEW_SCHEDULED' ? 'event' : 'info'}
+                          </span>
+                        </div>
+                        <div className="text-sm font-semibold text-[#142651]">
+                          {event.type === 'INTERVIEW_SCHEDULED' ? `Interview Round ${event.roundNo} Scheduled` :
+                            event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `Feedback Submitted by ${event.submittedBy?.fullName || 'Interviewer'}: Assessment Result - ${event.recommendation}` :
+                              event.type === 'PIPELINE_MOVED' ? `Moved to ${event.toStage?.name || 'Next Stage'}` :
+                                event.type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
+                        </div>
+                        <div className="text-[11px] text-[#6f7894] mb-1">
+                          {new Date(event.at).toLocaleString()}
+                        </div>
+                        {event.remark && (
+                          <div className="text-xs text-[#5e6a85] bg-gray-50 p-2 rounded-lg border border-gray-100">
+                            {event.remark}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Multiple Feedback Display */}
+                {selectedFeedbacks.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-xs font-bold uppercase text-[#8b95ad] tracking-wider ml-1">Interviewer Assessments ({selectedFeedbacks.length})</div>
+                    {selectedFeedbacks.map((f) => (
+                      <div key={f.id} className="os-card p-4 transition-all hover:shadow-md border-l-4 border-[#2ca764]">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[#eef3ff] flex items-center justify-center text-[10px] font-bold text-[#1f52cc]">
+                              {(f.submittedBy?.fullName || 'U').split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div className="text-sm font-medium text-[#142651]">{f.submittedBy?.fullName}</div>
+                          </div>
+                          <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${f.recommendation === 'PASS' ? 'bg-[#e8f5ed] text-[#2ca764]' :
+                              f.recommendation === 'FAIL' ? 'bg-[#fbeaea] text-[#cf3a3a]' : 'bg-[#fef4e8] text-[#f2994a]'
+                            }`}>
+                            {f.recommendation}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                            <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Technical Proficiency</div>
+                            <div className="text-xs font-bold text-[#142651]">{f.technicalRating} / 5</div>
+                          </div>
+                          <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                            <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Communication Skills</div>
+                            <div className="text-xs font-bold text-[#142651]">{f.communicationRating} / 5</div>
+                          </div>
+                          <div className="bg-[#f8f9fa] p-2 rounded text-center">
+                            <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Cultural Fit</div>
+                            <div className="text-xs font-bold text-[#142651]">{f.cultureFitRating} / 5</div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-xs">
+                            <span className="font-semibold text-[#142651]">Strengths:</span>
+                            <span className="text-[#5e6a85] ml-1">{f.strengths}</span>
+                          </div>
+                          <div className="text-xs">
+                            <span className="font-semibold text-[#142651]">Comments:</span>
+                            <p className="text-[#5e6a85] mt-1 italic text-[13px]">"{f.overallComments}"</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.08} className="bg-[#f8fbfb] p-4 overflow-auto border-t lg:border-t-0 border-[#e4ebf1]">
+              <div className="os-eyebrow">Quick Actions</div>
+
+              {canScheduleInterview ? (
+                <form className="os-card p-4 mt-2" onSubmit={onScheduleSubmit}>
+                  <div className="text-sm font-semibold text-[#142651] mb-3">Schedule Interview</div>
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Candidate</div>
+                    <select
+                      className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm"
+                      value={scheduleForm.candidateId}
+                      onChange={(event) => {
+                        const cId = event.target.value;
+                        setScheduleForm((prev) => {
+                          // If candidate already has an application, pre-fill the job if possible
+                          const existing = applications.find(a => a.candidateId === cId);
+                          return { ...prev, candidateId: cId, jobId: existing?.jobId || prev.jobId };
+                        });
+                      }}
+                      required
+                    >
+                      <option value="">Choose candidate...</option>
+                      {candidates.map((c) => (
+                        <option key={c.id} value={c.id}>{c.fullName} {c.email ? `(${c.email})` : ''}</option>
+                      ))}
+                    </select>
+
+                    <div className="text-xs font-semibold text-[#6d7893] ml-1">Select Job</div>
+                    <select
+                      className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm"
+                      value={scheduleForm.jobId}
+                      onChange={(event) => setScheduleForm((prev) => ({ ...prev, jobId: event.target.value }))}
+                      required
+                    >
+                      <option value="">Choose job role...</option>
+                      {jobs.map((j) => (
+                        <option key={j.id} value={j.id}>{j.title}</option>
+                      ))}
+                    </select>
+
+                    <div className="text-xs font-semibold text-[#6d7893] mt-1">Select Interviewers / Recruiters (Multiple)</div>
+                    <div className="max-h-32 overflow-y-auto border border-[#dbe4ee] rounded-lg p-2 space-y-1 bg-white">
+                      {interviewers.map((person) => (
+                        <label key={person.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={scheduleForm.interviewerIds.includes(person.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setScheduleForm(prev => {
+                                const newIds = checked
+                                  ? [...prev.interviewerIds, person.id]
+                                  : prev.interviewerIds.filter(id => id !== person.id);
+                                return { ...prev, interviewerIds: newIds };
+                              });
+                            }}
+                          />
+                          <span className="text-xs text-[#2a344f]">{person.fullName} <span className="os-muted text-[10px]">({person.role})</span></span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.round} onChange={(event) => setScheduleForm((prev) => ({ ...prev, round: event.target.value }))}>
+                        <option value="Round 1">Round 1</option>
+                        <option value="Round 2">Round 2</option>
+                        <option value="Formal HR Round">Formal HR Round</option>
+                      </select>
+                      <select className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" value={scheduleForm.mode} onChange={(event) => setScheduleForm((prev) => ({ ...prev, mode: event.target.value }))}>
+                        <option value="ONLINE">ONLINE</option>
+                        <option value="OFFLINE">OFFLINE</option>
+                        <option value="PHONE">PHONE</option>
+                      </select>
+                    </div>
+                    <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" type="datetime-local" value={scheduleForm.scheduledStart} onChange={(event) => setScheduleForm((prev) => ({ ...prev, scheduledStart: event.target.value }))} required />
+                    <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" type="datetime-local" value={scheduleForm.scheduledEnd} onChange={(event) => setScheduleForm((prev) => ({ ...prev, scheduledEnd: event.target.value }))} />
+                    <input className="h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" placeholder="Meeting link (optional)" value={scheduleForm.meetingLink} onChange={(event) => setScheduleForm((prev) => ({ ...prev, meetingLink: event.target.value }))} />
+                  </div>
+                  <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingSchedule}>
+                    {savingSchedule ? 'Scheduling...' : 'Schedule'}
+                  </button>
+                </form>
+              ) : null}
+
+              <form className="os-card p-4 mt-3" onSubmit={onFeedbackSubmit}>
+                <div className="text-sm font-semibold text-[#142651] mb-3">Submit Feedback</div>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-1">
+                    <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Technical Skills (1-5)</label>
+                    <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.technicalRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, technicalRating: event.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Communication (1-5)</label>
+                    <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.communicationRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, communicationRating: event.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    <label className="text-[10px] uppercase font-bold text-[#8b95ad] ml-1">Culture Fit (1-5)</label>
+                    <input className="h-10 rounded-lg border border-[#dbe4ee] px-2 text-sm" type="number" min="1" max="5" value={feedbackForm.cultureFitRating} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, cultureFitRating: event.target.value }))} />
+                  </div>
+                </div>
+                <textarea className="mt-3 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Key Strengths..." value={feedbackForm.strengths} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, strengths: event.target.value }))} required />
+                <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Potential Concerns..." value={feedbackForm.concerns} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, concerns: event.target.value }))} required />
+                <select className="mt-2 h-10 w-full rounded-lg border border-[#dbe4ee] px-2 text-sm" value={feedbackForm.recommendation} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, recommendation: event.target.value }))}>
+                  <option value="PASS">PASS</option>
+                  <option value="OFFER">OFFER (Move to Selected)</option>
+                  <option value="FAIL">FAIL</option>
+                  <option value="HOLD">HOLD</option>
+                  <option value="PENDING">PENDING</option>
+                </select>
+                <textarea className="mt-2 min-h-[68px] w-full rounded-lg border border-[#dbe4ee] px-2 py-2 text-sm" placeholder="Overall Decision Comments..." value={feedbackForm.overallComments} onChange={(event) => setFeedbackForm((prev) => ({ ...prev, overallComments: event.target.value }))} required />
+                <button className="os-btn-primary w-full mt-3" type="submit" disabled={savingFeedback || !selectedInterview || Boolean(myFeedback)}>
+                  {myFeedback ? 'You have submitted feedback' : savingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                </button>
+              </form>
+
+              <div className="os-card p-4 mt-3">
+                <div className="text-sm font-semibold text-[#142651] mb-3">Upload Voice Recording</div>
+                {recorderSupported ? (
+                  <div className="rounded-lg border border-[#dbe4ee] bg-[#f7faff] p-3 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-[#5f6a84]">In-browser Recorder</div>
+                      <div className="text-xs font-semibold text-[#1f4bc6]">{Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:{(recordingSeconds % 60).toString().padStart(2, '0')}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      {!isRecording ? (
+                        <button className="os-btn-primary !h-9 flex-1" type="button" onClick={startBrowserRecording}>Start Recording</button>
+                      ) : (
+                        <button className="os-btn-outline !h-9 flex-1" type="button" onClick={stopBrowserRecording}>Stop Recording</button>
+                      )}
+                      <button
+                        className="os-btn-outline !h-9"
+                        type="button"
+                        onClick={() => {
+                          setRecordedBlob(null);
+                          if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+                          setRecordedUrl('');
+                          setRecordingSeconds(0);
+                        }}
+                        disabled={!recordedBlob}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    {recordedUrl ? (
+                      <audio controls className="w-full mt-2">
+                        <source src={recordedUrl} type="audio/webm" />
+                      </audio>
+                    ) : null}
+                  </div>
+                ) : null}
+                <input className="os-file-input" type="file" accept="audio/*" onChange={(event) => setRecordingFile(event.target.files?.[0] || null)} />
+                <button className="os-btn-outline w-full mt-3" type="button" onClick={onUploadRecording} disabled={uploadingRecording}>
+                  {uploadingRecording ? 'Uploading...' : 'Upload Recording'}
+                </button>
+              </div>
+            </Reveal>
+          </>
         )}
       </PageEnter>
     </EnterpriseLayout>

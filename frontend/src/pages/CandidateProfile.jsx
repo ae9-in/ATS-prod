@@ -116,7 +116,7 @@ const CandidateProfile = () => {
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || 'Photo upload failed');
-      
+
       const refreshed = await apiGet(`/candidates/${id}`);
       setCandidate(refreshed.data);
       setPhotoFile(null);
@@ -270,10 +270,20 @@ const CandidateProfile = () => {
                           <div className="text-[11px] uppercase tracking-[.12em] text-[#6f7d98]">{item.type.replaceAll('_', ' ')}</div>
                           <div className="text-sm text-[#1d2b4f] mt-1">
                             {item.toStage?.name ? `Moved to ${item.toStage.name}` : null}
-                            {item.recommendation ? `Feedback: ${item.recommendation}` : null}
+                            {item.recommendation ? `Feedback assessment: ${item.recommendation}` : null}
                             {item.job?.title ? `Job: ${item.job.title}` : null}
                             {!item.toStage?.name && !item.recommendation && !item.job?.title ? 'Candidate activity updated' : null}
                           </div>
+                          {item.remark && (
+                            <div className="text-xs text-[#5e6a85] bg-[#f8f9fb] p-2 mt-2 rounded-lg border border-[#e8ecf0] italic">
+                              "{item.remark}"
+                            </div>
+                          )}
+                          {item.feedback && (
+                            <div className="text-xs text-[#5e6a85] mt-1 opacity-80">
+                              Note: {item.feedback}
+                            </div>
+                          )}
                           <div className="text-xs text-[#7a86a0] mt-1">{new Date(item.at).toLocaleString()}</div>
                         </div>
                       ))
@@ -335,13 +345,13 @@ const CandidateProfile = () => {
                       <div className="text-xs text-[#7b88a3]">Read only for your role.</div>
                     )}
                     {candidate.resumeFile?.storageKey ? (
-                      <a 
-                        className="text-sm text-[#1f4bc6] mt-2 inline-block" 
-                        href={candidate.resumeFile.storageKey?.startsWith('http') 
-                          ? candidate.resumeFile.storageKey 
+                      <a
+                        className="text-sm text-[#1f4bc6] mt-2 inline-block"
+                        href={candidate.resumeFile.storageKey?.startsWith('http')
+                          ? candidate.resumeFile.storageKey
                           : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:4000'}/uploads/${candidate.resumeFile.storageKey}`
-                        } 
-                        target="_blank" 
+                        }
+                        target="_blank"
                         rel="noreferrer"
                       >
                         View Current Resume: {candidate.resumeFile.originalName}
