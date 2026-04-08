@@ -482,10 +482,24 @@ const Pipeline = () => {
                           </div>
 
                           {(historyByApp[app.id] || []).length > 0 ? (
-                            <div className="mt-3 text-[11px] text-[#5f6b86] border-t border-[#edf1f6] pt-2">
-                              <div className="font-semibold">Last move: {(historyByApp[app.id][0]?.toStage?.name || 'Unknown')}</div>
-                              <div className="italic mt-0.5">"{historyByApp[app.id][0]?.remark || 'No remark provided'}"</div>
-                              <div className="mt-1 opacity-70">By {(historyByApp[app.id][0]?.movedBy?.fullName || 'System')}</div>
+                            <div className="mt-4 border-t border-[#edf1f6] pt-3">
+                              <div className="text-[10px] uppercase tracking-widest font-bold text-[#8b95ad] mb-2 px-1">Journey History</div>
+                              <div className="space-y-3 max-h-[160px] overflow-y-auto px-1 pr-2 thin-scrollbar">
+                                {historyByApp[app.id].map((item, hIdx) => (
+                                  <div key={hIdx} className="relative pl-3 before:absolute before:left-0 before:top-1.5 before:bottom-0 before:w-0.5 before:bg-[#e2e8f0]">
+                                    <div className="text-[10px] font-bold text-[#1f52cc]">
+                                      {item.toStage?.name || 'Next Stage'}
+                                    </div>
+                                    <div className="text-[10px] text-[#5e6a85] mt-1 leading-relaxed">
+                                      {item.remark || 'No remark provided'}
+                                    </div>
+                                    <div className="text-[9px] text-[#abb5cc] mt-1 flex justify-between">
+                                      <span>{item.movedBy?.fullName || 'System'}</span>
+                                      <span>{new Date(item.movedAt || item.at).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           ) : null}
                         </div>
