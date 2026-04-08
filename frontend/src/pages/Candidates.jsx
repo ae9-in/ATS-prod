@@ -30,6 +30,7 @@ const Candidates = () => {
   const [error, setError] = useState('');
   const [banner, setBanner] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showCustomFieldSetup, setShowCustomFieldSetup] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,6 +75,13 @@ const Candidates = () => {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400); // 400ms debounce
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     let mounted = true;
 
     const load = async () => {
@@ -81,7 +89,7 @@ const Candidates = () => {
         setLoading(true);
         setError('');
         await Promise.all([
-          loadCandidates(search, categoryFilter), 
+          loadCandidates(debouncedSearch, categoryFilter), 
           loadCustomDefinitions(),
           loadCategories()
         ]);
@@ -97,7 +105,7 @@ const Candidates = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [debouncedSearch, categoryFilter]);
 
   const onSearchSubmit = async (event) => {
     event.preventDefault();

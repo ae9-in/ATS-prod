@@ -540,18 +540,16 @@ router.get(
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        include: {
-          skills: true,
-          education: true,
-          resumeFile: {
-            select: {
-              id: true,
-              storageKey: true,
-              originalName: true,
-              mimeType: true,
-              createdAt: true,
-            },
-          },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          totalExperienceYears: true,
+          currentCompany: true,
+          source: true,
+          category: true,
+          createdAt: true,
           profilePhotoFile: {
             select: {
               id: true,
@@ -567,14 +565,6 @@ router.get(
                 select: { id: true, name: true },
               },
             },
-          },
-          customFieldValues: {
-            include: {
-              fieldDefinition: {
-                select: { id: true, fieldKey: true, fieldLabel: true, fieldType: true },
-              },
-            },
-            orderBy: { createdAt: "asc" },
           },
           _count: {
             select: { applications: true },

@@ -60,20 +60,32 @@ const Pipeline = () => {
       .filter(Boolean)
       .join('&');
 
-    const [stagesRes, applicationsRes, candidatesRes, jobsRes] = await Promise.all([
+    const fetchRequests = [
       apiGet(`/pipeline/stages${jobFilterId ? `?jobId=${encodeURIComponent(jobFilterId)}` : ''}`),
       apiGet(`/applications?${appQuery}`),
-      apiGet('/candidates?limit=100'),
-      apiGet('/jobs?limit=100'),
-    ]);
+    ];
+
+    // Only fetch candidates and jobs if we don't have them yet or if we're doing a full reload
+    const shouldFetchLists = candidates.length === 0 || jobs.length === 0;
+    if (shouldFetchLists) {
+      fetchRequests.push(apiGet('/candidates?limit=200'));
+      fetchRequests.push(apiGet('/jobs?limit=200'));
+    }
+
+    const results = await Promise.all(fetchRequests);
+    const stagesRes = results[0];
+    const applicationsRes = results[1];
+    const candidatesRes = shouldFetchLists ? results[2] : null;
+    const jobsRes = shouldFetchLists ? results[3] : null;
+
 
     const stageRows = stagesRes.data || [];
     const applicationRows = applicationsRes.data || [];
 
     setStages(stageRows);
     setApplications(applicationRows);
-    setCandidates(candidatesRes.data || []);
-    setJobs(jobsRes.data || []);
+    if (candidatesRes) setCandidates(candidatesRes.data || []);
+    if (jobsRes) setJobs(jobsRes.data || []);
     setSelectedStages(
       applicationRows.reduce((acc, app) => {
         acc[app.id] = app.currentStage?.id || '';

@@ -131,6 +131,7 @@ model Candidate {
   @@index([fullName])
   @@index([email])
   @@index([phone])
+  @@index([category])
   @@map("candidates")
 }
 
@@ -181,6 +182,7 @@ model Application {
   @@unique([candidateId, jobId])
   @@index([jobId, status])
   @@index([currentStageId])
+  @@index([shortlisted])
   @@map("applications")
 }
 
@@ -238,6 +240,7 @@ model Interview {
   voiceRecordingFile         FileMeta?         @relation("InterviewRecordingFile", fields: [voiceRecordingFileId], references: [id])
   feedbacks                  InterviewFeedback[]
 
+  @@index([scheduledStart])
   @@map("interviews")
 }
 
