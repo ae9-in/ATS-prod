@@ -11,7 +11,7 @@ CREATE INDEX "candidates_category_idx" ON "candidates"("category");
 CREATE INDEX "interviews_scheduled_start_idx" ON "interviews"("scheduled_start");
 
 -- DropIndex
-DROP INDEX "interview_feedback_interview_id_key";
+ALTER TABLE "interview_feedback" DROP CONSTRAINT "interview_feedback_interview_id_key";
 
 -- CreateIndex
 CREATE UNIQUE INDEX "interview_feedback_interview_id_submitted_by_key" ON "interview_feedback"("interview_id", "submitted_by");
