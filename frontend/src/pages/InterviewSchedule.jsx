@@ -739,9 +739,9 @@ const InterviewSchedule = () => {
                       </span>
                     </div>
                     <div className="text-sm font-semibold text-[#142651]">
-                      {event.type === 'INTERVIEW_SCHEDULED' ? `Round ${event.roundNo} Scheduled` : 
-                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `${event.submittedBy?.fullName || 'Feedback'}: ${event.recommendation}` : 
-                       event.type.replace(/_/g, ' ')}
+                      {event.type === 'INTERVIEW_SCHEDULED' ? `Interview Round ${event.roundNo} Scheduled` : 
+                       event.type === 'INTERVIEW_FEEDBACK_SUBMITTED' ? `Feedback Submitted by ${event.submittedBy?.fullName || 'Interviewer'}: Assessment Result - ${event.recommendation}` : 
+                       event.type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
                     </div>
                     <div className="text-[11px] text-[#6f7894] mb-1">
                       {new Date(event.at).toLocaleString()}
@@ -778,16 +778,16 @@ const InterviewSchedule = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-2 mb-3">
                       <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase">Tech</div>
-                        <div className="text-xs font-bold">{f.technicalRating}/5</div>
+                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Technical Proficiency</div>
+                        <div className="text-xs font-bold text-[#142651]">{f.technicalRating} / 5</div>
                       </div>
                       <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase">Comm</div>
-                        <div className="text-xs font-bold">{f.communicationRating}/5</div>
+                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Communication Skills</div>
+                        <div className="text-xs font-bold text-[#142651]">{f.communicationRating} / 5</div>
                       </div>
                       <div className="bg-[#f8f9fa] p-2 rounded text-center">
-                        <div className="text-[10px] text-[#868fa0] uppercase">Culture</div>
-                        <div className="text-xs font-bold">{f.cultureFitRating}/5</div>
+                        <div className="text-[10px] text-[#868fa0] uppercase tracking-wider">Cultural Fit</div>
+                        <div className="text-xs font-bold text-[#142651]">{f.cultureFitRating} / 5</div>
                       </div>
                     </div>
                     <div className="space-y-2">
